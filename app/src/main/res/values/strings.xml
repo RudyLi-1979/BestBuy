@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">BestBuy Scanner</string>
+    <string name="scan_instruction">Align barcode to scan</string>
+    <string name="manual_input">Manual UPC Input</string>
+    <string name="searching">Searching for product...</string>
+    <string name="product_not_found">Product not found, please scan again</string>
+    <string name="camera_permission_required">Camera permission required to scan barcodes</string>
+    <string name="camera_failed">Camera failed to start</string>
+    
+    <!-- Product Detail -->
+    <string name="product_description">Product Description</string>
+    <string name="recommendations">Recommendations</string>
+    <string name="also_viewed">Customers Also Viewed</string>
+    <string name="add_to_cart">Add to Cart</string>
+    <string name="view_on_bestbuy">View on BestBuy</string>
+    <string name="on_sale">On Sale</string>
+    <string name="free_shipping">Free Shipping</string>
+    <string name="online_available">Available Online</string>
+    <string name="store_available">Available in Store</string>
+    <string name="both_available">Available Online and in Store</string>
+    <string name="out_of_stock">Out of Stock</string>
+    <string name="product_image">Product Image</string>
+</resources>
