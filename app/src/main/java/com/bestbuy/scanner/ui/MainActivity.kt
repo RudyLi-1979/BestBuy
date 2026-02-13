@@ -86,6 +86,8 @@ class MainActivity : AppCompatActivity() {
     
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(com.bestbuy.scanner.R.menu.menu_main, menu)
+        // Hide chat mode since we're launched from ChatActivity
+        menu.findItem(com.bestbuy.scanner.R.id.action_chat)?.isVisible = false
         return true
     }
     
@@ -93,6 +95,10 @@ class MainActivity : AppCompatActivity() {
         return when (item.itemId) {
             com.bestbuy.scanner.R.id.action_cart -> {
                 startActivity(Intent(this, CartActivity::class.java))
+                true
+            }
+            android.R.id.home -> {
+                finish()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -108,10 +114,15 @@ class MainActivity : AppCompatActivity() {
                 // Track scan interaction
                 recommendationViewModel.trackScan(product)
                 
-                // Product found, navigate to product detail page with product object
-                val intent = Intent(this, ProductDetailActivity::class.java)
-                intent.putExtra("PRODUCT_DATA", product)
-                startActivity(intent)
+                // Return scanned product to ChatActivity
+                val resultIntent = Intent().apply {
+                    putExtra("SCANNED_UPC", product.upc)
+                    putExtra("PRODUCT_NAME", product.name)
+                    putExtra("PRODUCT_SKU", product.sku)
+                    putExtra("PRODUCT_DATA", product)
+                }
+                setResult(RESULT_OK, resultIntent)
+                finish()
                 
                 // Clear product data for next scan
                 viewModel.clearProduct()

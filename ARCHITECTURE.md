@@ -1,6 +1,45 @@
 # 專案架構說明
 
-## MVVM 架構
+## 整體架構
+
+本專案採用 **Chat-First 架構**，包含 Android App 和 UCP Server 兩個部分：
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   Android App                        │
+│                 (Kotlin + MVVM)                     │
+│                                                      │
+│  ChatActivity (主畫面) ──┐                          │
+│      ↓                    │                          │
+│  ChatViewModel            │                          │
+│      ↓                    │                          │
+│  ChatRepository ──────────┼──→ UCP Server           │
+│                           │                          │
+│  MainActivity (掃描) ─────┘                          │
+│  ProductDetailActivity                              │
+│  CartActivity                                       │
+└──────────────────┬──────────────────────────────────┘
+                   │ HTTPS (Cloudflare Tunnel)
+                   │
+┌──────────────────▼──────────────────────────────────┐
+│                 UCP Server                           │
+│             (Python + FastAPI)                      │
+│                                                      │
+│  /chat API                                          │
+│      ↓                                              │
+│  ChatService                                        │
+│      ↓                                              │
+│  ┌──────────────┐  ┌────────────────────────┐     │
+│  │ Gemini 2.5   │  │ BestBuyAPIClient       │     │
+│  │ Flash Client │  │ - search_products()    │     │
+│  │              │  │ - get_store_availability()│  │
+│  │ Function     │  │ - get_also_bought()    │     │
+│  │ Calling      │  │ - advanced_search()    │     │
+│  └──────────────┘  └────────────────────────┘     │
+└─────────────────────────────────────────────────────┘
+```
+
+## Android App MVVM 架構
 
 本專案採用 MVVM (Model-View-ViewModel) 架構模式：
 
@@ -9,8 +48,10 @@
 │                      View Layer                      │
 │  (Activity, Fragment, XML Layouts)                  │
 │                                                      │
-│  - MainActivity.kt                                  │
+│  - ChatActivity.kt (主畫面)                         │
+│  - MainActivity.kt (掃描)                           │
 │  - ProductDetailActivity.kt                         │
+│  - CartActivity.kt                                  │                         │
 │  - activity_main.xml                                │
 │  - activity_product_detail.xml                      │
 └──────────────────┬──────────────────────────────────┘
@@ -52,10 +93,47 @@
 
 ## 資料流程
 
-### 1. 條碼掃描流程
+### 1. Chat Mode 對話流程 (新)
 
 ```
-User scans barcode
+User types message in ChatActivity
+       ↓
+ChatViewModel.sendMessage()
+       ↓
+ChatRepository.sendMessage()
+       ↓
+UCP Server /chat API (Cloudflare Tunnel)
+       ↓
+ChatService.process_message()
+       ↓
+GeminiClient.generate_content()
+       ↓
+Gemini 2.5 Flash AI analyzes intent
+       ↓
+If function call needed:
+  ChatService.execute_function()
+       ↓
+  BestBuyAPIClient (search/availability/etc)
+       ↓
+  Return results to Gemini
+       ↓
+Gemini generates response
+       ↓
+ChatResponse (message + products)
+       ↓
+LiveData updates
+       ↓
+ChatActivity displays message + product cards
+```
+
+### 2. 條碼掃描流程
+
+### 2. 條碼掃描流程
+
+```
+User clicks "📷 Scan" in ChatActivity
+       ↓
+Start MainActivity with startActivityForResult
        ↓
 BarcodeScannerAnalyzer detects barcode
        ↓
@@ -71,12 +149,12 @@ API Response → Product Model
        ↓
 LiveData updates
        ↓
-MainActivity observes changes
-       ↓
 Navigate to ProductDetailActivity
+       ↓
+User exits → Return to ChatActivity
 ```
 
-### 2. 產品詳情載入流程
+### 3. 產品詳情載入流程
 
 ```
 ProductDetailActivity.onCreate()
@@ -235,9 +313,114 @@ Glide.with(context)
 
 ## 後續改進建議
 
-1. **引入 Hilt/Koin**: 改善依賴注入
-2. **使用 Room**: 加入本地資料庫快取
+1. ~~**引入 Hilt/Koin**: 改善依賴注入~~ (使用 Manual DI)
+2. ✅ **使用 Room**: Room Database v2 已實作（購物車、用戶互動）
 3. **StateFlow/SharedFlow**: 替代 LiveData
 4. **Jetpack Compose**: 使用現代 UI 框架
 5. **Clean Architecture**: 進一步分層（Domain Layer）
 6. **單元測試**: 加入完整的測試覆蓋
+
+---
+
+## UCP Server 架構 (Python FastAPI)
+
+### 整體架構
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   FastAPI App                        │
+│                   (main.py)                          │
+└──────────────────┬──────────────────────────────────┘
+                   │
+        ┌──────────┴──────────┐
+        │                     │
+┌───────▼──────┐    ┌─────────▼────────┐
+│  API Routes  │    │   Middleware     │
+│  (/chat)     │    │   (CORS, Auth)   │
+└───────┬──────┘    └──────────────────┘
+        │
+┌───────▼───────────────────────────────────────────┐
+│              ChatService                          │
+│  - process_message()                              │
+│  - execute_function()                             │
+└───────┬───────────────────────┬───────────────────┘
+        │                       │
+┌───────▼────────┐    ┌─────────▼─────────────────┐
+│ GeminiClient   │    │  BestBuyAPIClient        │
+│ - AI Dialog    │    │  - search_products()     │
+│ - Function     │    │  - get_store_availability│
+│   Calling      │    │  - get_also_bought()     │
+│                │    │  - advanced_search()     │
+└────────────────┘    └──────────────────────────┘
+```
+
+### 關鍵組件
+
+#### 1. Chat Service
+- **位置**: `app/services/chat_service.py`
+- **職責**: 
+  - 處理用戶訊息
+  - 調用 Gemini AI
+  - 執行函數調用
+  - 返回結果給用戶
+
+#### 2. Gemini Client
+- **位置**: `app/services/gemini_client.py`
+- **功能**:
+  - 與 Gemini 2.5 Flash API 通訊
+  - 處理 Function Calling
+  - 管理對話歷史
+
+#### 3. Best Buy API Client
+- **位置**: `app/services/bestbuy_client.py`
+- **功能**:
+  - 商品搜尋（UPC、關鍵字、進階）
+  - 門市庫存查詢
+  - 推薦商品（Also Viewed, Also Bought）
+  - 智能搜尋優化（規格篩選、關聯性評分）
+
+### 資料流程
+
+```
+Android App
+    ↓ POST /chat
+ChatService.process_message()
+    ↓
+GeminiClient.generate_content()
+    ↓ (如需函數調用)
+ChatService.execute_function()
+    ↓
+BestBuyAPIClient.[function_name]()
+    ↓
+Return results → Gemini
+    ↓
+Gemini generates final response
+    ↓
+ChatResponse (message + products + function_calls)
+    ↓ HTTPS Response
+Android App displays results
+```
+
+### 部署架構
+
+```
+Local Machine (localhost:8000)
+    ↓
+Cloudflare Tunnel
+    ↓
+Public URL (https://ucp.rudy.xx.kg)
+    ↓
+Android App (anywhere in the world)
+```
+
+**優點**:
+- ✅ HTTPS 加密
+- ✅ 全球可訪問
+- ✅ 無需端口轉發或 VPN
+- ✅ DDoS 防護
+
+### 相關文件
+
+- `ucp_server/README.md` - UCP Server 完整說明
+- `.github/copilot-instructions.md` - 開發指南
+- `BESTBUY_API_INTEGRATION_ANALYSIS.md` - API 整合分析

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  ucp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bestbuy-ucp-server
+    ports:
+      - "58000:58000"
+    environment:
+      # 從 .env 文件載入環境變數
+      - BESTBUY_API_KEY=${BESTBUY_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_URL=${GEMINI_API_URL}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./ucp_bestbuy.db}
+    volumes:
+      # 掛載本地代碼以便開發時即時更新（生產環境可移除）
+      - .:/app
+      # 持久化資料庫
+      - ./ucp_bestbuy.db:/app/ucp_bestbuy.db
+      # 持久化金鑰目錄
+      - ./keys:/app/keys
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - ucp-network
+
+networks:
+  ucp-network:
+    driver: bridge

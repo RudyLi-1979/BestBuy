@@ -1,9 +1,17 @@
 # BestBuy Scanner App
 
-一個功能完整的 Android 條碼掃描應用程式，整合 BestBuy API 來顯示產品資訊和推薦商品。
+一個功能完整的 **Chat-First** Android 購物應用程式，整合 **Gemini 2.5 Flash AI**、**Best Buy API** 和本地 **UCP Server**，提供智能對話購物體驗。
 
-## 功能特色
+## 🎯 核心特色
 
+### 💬 Chat Mode（主要功能）
+- **AI 智能助手**: 整合 Gemini 2.5 Flash，自然語言購物對話
+- **產品卡片顯示**: 聊天中直接顯示產品照片、價格和詳情
+- **語音輸入**: 支援語音搜尋產品
+- **多功能整合**: 在對話中完成搜尋、查詢庫存、加入購物車等操作
+- **本地 UCP Server**: Python FastAPI 後端，處理 AI 對話和 Best Buy API 整合
+
+### 📱 傳統功能
 - 📷 **條碼掃描**: 使用 CameraX 和 ML Kit 進行即時條碼掃描
 - 🔍 **產品搜尋**: 透過 UPC 條碼搜尋 BestBuy 產品
 - 📊 **產品詳情**: 顯示完整的產品資訊，包括：
@@ -29,11 +37,15 @@
   - 即時顯示總金額
   - 點擊購物車商品可查看詳細資訊
   - 資料持久化（使用 Room Database）
+- 🏪 **門市庫存查詢**: 查詢附近實體門市的產品庫存（BOPIS）
+- 🛍️ **Also Bought 推薦**: 顯示經常一起購買的商品
+- 🔍 **進階搜尋**: 多條件篩選（製造商、價格範圍、運送選項等）
 - 🔄 **螢幕旋轉支援**: 旋轉裝置時保留產品資訊
-- 🔗 **購物連結**: 直接連結到 BestBuy 網站進行購買
+- 🌐 **Cloudflare Tunnel**: 全球可訪問的 UCP Server 連線
 
 ## 技術架構
 
+### Android App
 - **語言**: Kotlin
 - **架構模式**: MVVM (Model-View-ViewModel)
 - **UI**: XML Layouts with View Binding
@@ -41,19 +53,30 @@
 - **條碼掃描**: ML Kit Barcode Scanning
 - **網路請求**: Retrofit + OkHttp
 - **圖片載入**: Glide
-- **資料持久化**: Room Database
+- **資料持久化**: Room Database v2
 - **非同步處理**: Kotlin Coroutines + Flow
-- **依賴注入**: Manual DI (可升級至 Hilt/Koin)
+- **依賴注入**: Manual DI
+
+### UCP Server (Python Backend)
+- **框架**: FastAPI
+- **AI 模型**: Gemini 2.5 Flash
+- **資料庫**: SQLite (開發) / PostgreSQL (生產)
+- **API 整合**: Best Buy Developer API
+- **部署**: Cloudflare Tunnel (HTTPS)
+- **非同步**: asyncio + httpx
 
 ## 專案結構
 
 ```
-app/
-├── src/main/java/com/bestbuy/scanner/
-│   ├── data/
-│   │   ├── api/
-│   │   │   ├── BestBuyApiService.kt      # API 介面定義
-│   │   │   └── RetrofitClient.kt         # Retrofit 配置
+📁 BestBuy/
+├── 📱 app/ (Android App)
+│   └── src/main/java/com/bestbuy/scanner/
+│       ├── data/
+│       │   ├── api/
+│       │   │   ├── BestBuyApiService.kt      # API 介面定義
+│       │   │   ├── UCPApiService.kt          # UCP Server API
+│       │   │   ├── RetrofitClient.kt         # Retrofit 配置
+│       │   │   └── UCPRetrofitClient.kt      # UCP Client
 │   │   ├── dao/
 │   │   │   ├── CartDao.kt                # 購物車資料存取層
 │   │   │   └── UserInteractionDao.kt     # 用戶互動資料存取層
@@ -70,18 +93,37 @@ app/
 │   │       ├── CartRepository.kt         # 購物車資料儲存庫
 │   │       ├── UserBehaviorRepository.kt # 用戶行為儲存庫
 │   │       └── RecommendationRepository.kt # 推薦儲存庫
-│   ├── ui/
-│   │   ├── adapter/
-│   │   │   ├── RecommendationAdapter.kt  # 推薦商品 Adapter
-│   │   │   ├── PersonalizedRecommendationAdapter.kt # 個人化推薦 Adapter
-│   │   │   └── CartAdapter.kt            # 購物車 Adapter
-│   │   ├── viewmodel/
-│   │   │   ├── ProductViewModel.kt       # 產品 ViewModel
-│   │   │   ├── CartViewModel.kt          # 購物車 ViewModel
-│   │   │   └── RecommendationViewModel.kt # 推薦 ViewModel
-│   │   ├── MainActivity.kt               # 主畫面 (掃描)
-│   │   ├── ProductDetailActivity.kt      # 產品詳情頁
-│   │   └── CartActivity.kt               # 購物車頁面
+│       ├── ui/
+│       │   ├── adapter/
+│       │   │   ├── ChatAdapter.kt            # 聊天訊息 Adapter
+│       │   │   ├── ChatProductAdapter.kt     # 聊天產品卡片
+│       │   │   ├── RecommendationAdapter.kt  # 推薦商品 Adapter
+│       │   │   ├── PersonalizedRecommendationAdapter.kt
+│       │   │   └── CartAdapter.kt            # 購物車 Adapter
+│       │   ├── viewmodel/
+│       │   │   ├── ChatViewModel.kt          # 聊天 ViewModel
+│       │   │   ├── ProductViewModel.kt       # 產品 ViewModel
+│       │   │   ├── CartViewModel.kt          # 購物車 ViewModel
+│       │   │   └── RecommendationViewModel.kt
+│       │   ├── ChatActivity.kt           # 主畫面 (Chat Mode)
+│       │   ├── MainActivity.kt           # 掃描畫面
+│       │   ├── ProductDetailActivity.kt  # 產品詳情頁
+│       │   └── CartActivity.kt           # 購物車頁面
+│
+├── 🐍 ucp_server/ (Python Backend)
+│   ├── app/
+│   │   ├── main.py                       # FastAPI 入口
+│   │   ├── config.py                     # 配置
+│   │   ├── models/                       # 資料模型
+│   │   ├── schemas/                      # Pydantic 驗證
+│   │   ├── services/
+│   │   │   ├── bestbuy_client.py         # Best Buy API Client
+│   │   │   ├── gemini_client.py          # Gemini AI Client
+│   │   │   └── chat_service.py           # Chat 處理服務
+│   │   └── api/
+│   │       └── chat.py                   # Chat API 端點
+│   ├── requirements.txt
+│   └── README.md
 │   └── utils/
 │       └── BarcodeScannerAnalyzer.kt     # 條碼掃描分析器
 └── src/main/res/
@@ -102,11 +144,19 @@ app/
 
 ### 1. 前置需求
 
+**Android App:**
 - Android Studio Arctic Fox 或更新版本
 - Android SDK 24 或以上
 - BestBuy API Key ([註冊取得](https://developer.bestbuy.com/))
 
-### 2. 設定 API Key
+**UCP Server:**
+- Python 3.11+
+- pip (Python 套件管理器)
+- Gemini API Key
+
+### 2. 設定 Android App
+
+#### 2.1 設定 Best Buy API Key
 
 在專案根目錄的 `.env` 檔案中，將 `YOUR_API_KEY_HERE` 替換為你的 BestBuy API Key：
 
@@ -127,7 +177,7 @@ cp .env.example .env
 
 **安全提示**: `.env` 檔案已加入 `.gitignore`，確保你的 API Key 不會被提交到版本控制系統。
 
-### 3. 建置專案
+#### 2.2 建置 Android 專案
 
 ```bash
 # 克隆專案後，在 Android Studio 中開啟
@@ -135,6 +185,85 @@ cp .env.example .env
 
 # 或使用命令列建置
 ./gradlew build
+```
+
+### 3. 設定 UCP Server
+
+#### 3.1 安裝依賴
+
+**使用 Docker（推薦）：**
+```bash
+cd ucp_server
+
+# 配置環境變數
+copy .env.example .env
+# 編輯 .env 填入 API Keys
+
+# 啟動服務
+.\start_docker.ps1
+# 或使用 docker-compose up -d
+```
+
+**本地開發模式：**
+```bash
+cd ucp_server
+
+# 建立虛擬環境
+python -m venv venv
+
+# 啟動虛擬環境 (Windows)
+.\venv\Scripts\activate
+
+# 啟動虛擬環境 (Linux/Mac)
+source venv/bin/activate
+
+# 安裝依賴
+pip install -r requirements.txt
+```
+**Docker 模式：**
+```bash
+# 使用快速腳本
+.\start_docker.ps1
+
+# 或直接使用 docker-compose
+docker-compose up -d
+
+# 查看日誌
+docker-compose logs -f
+```
+
+**本地模式：**
+```bash
+# 使用 PowerShell 腳本
+.\start_server.ps1
+
+# 或直接使用 uvicorn
+uvicorn app.main:app --reload --port 58000
+```
+
+Server 將在 `http://localhost:5_API_KEY
+# GEMINI_API_KEY=你的Gemini_API_KEY
+```
+
+#### 3.3 啟動 Server
+
+```bash
+# 開發模式
+uvicorn app.main:app --reload --port 8000
+
+# 或使用提供的腳本
+.\start_server.ps1
+```
+
+Server 將在 `http://localhost:8000` 啟動。
+
+#### 3.4 Cloudflare Tunnel (可選)
+
+如果需要從實體裝置存取 UCP Server，可以使用 Cloudflare Tunnel：
+
+```bash
+# 安裝 cloudflared
+# 查看 ucp_server/README.md 了解詳細設定
 ```
 
 ### 4. 執行應用程式
@@ -146,9 +275,20 @@ cp .env.example .env
 
 ## 使用方式
 
+### Chat Mode (主要功能)
+
+1. 開啟應用程式，自動進入 Chat Mode
+2. 輸入文字或使用語音搜尋產品
+   - 例：「我想買 iPhone 15 Pro」
+   - 例：「Show me MacBook Pro 14 inch」
+   - 例：「哪裡可以買到 Mac mini?」
+3. AI 助手會對話式回答並顯示產品卡片
+4. 點擊產品卡片查看完整詳情
+5. 在詳情頁可以加入購物車或查看更多資訊
+
 ### 掃描條碼
 
-1. 開啟應用程式
+1. 在 Chat Mode 中點擊「📷 Scan」按鈕
 2. 授予相機權限
 3. 將相機對準商品條碼
 4. 應用程式會自動掃描並搜尋產品
@@ -240,6 +380,26 @@ A: BestBuy API 並非所有產品都有推薦商品資料，這是正常現象�
 
 ## 最新更新
 
+### ✨ Chat-First 架構重構 + UCP Server 整合 (2026-02-13)
+
+**Chat Mode 成為主要功能：**
+- ✅ ChatActivity 為應用程式主畫面
+- ✅ 語音輸入支援（Speech Recognition API）
+- ✅ 掃描按鈕啟動 MainActivity
+- ✅ 聊天中顯示產品卡片，點擊查看詳情
+
+**UCP Server 後端：**
+- ✅ Python FastAPI + Gemini 2.5 Flash 整合
+- ✅ 智能搜尋優化（規格篩選、關聯性評分）
+- ✅ Cloudflare Tunnel 全球可訪問
+- ✅ 對話歷史管理
+- ✅ 函式呼叫（Function Calling）
+
+**新功能 (2026-02-13)：**
+- ✅ **門市庫存查詢**: 查詢附近實體門市的產品庫存（BOPIS）
+- ✅ **Also Bought 推薦**: 顯示經常一起購買的商品
+- ✅ **進階搜尋**: 多條件篩選（製造商、價格範圍、運送選項、特價等）
+
 ### ✨ 階段一：個人化推薦功能 (2026-02-12)
 
 成功實現基於用戶行為的個人化推薦系統：
@@ -257,10 +417,10 @@ A: BestBuy API 並非所有產品都有推薦商品資料，這是正常現象�
 - UserBehaviorRepository（行為追蹤）
 - "For You" UI 區塊（個人化推薦顯示）
 
-詳細資訊請參考：
-- `Implementation_Phase1_Recommendations.md` - 實作計畫
-- `personalized_recommendation_research.md` - 研究文件
-- `recommendation_quality_improvement.md` - 品質改進說明
+**相關文件：**
+- [Walkthrough.md](Walkthrough.md) - 完整開發歷程
+- [ARCHITECTURE.md](ARCHITECTURE.md) - 架構說明
+- [SECURITY.md](SECURITY.md) - API Key 安全指南
 
 ## 未來改進方向
 

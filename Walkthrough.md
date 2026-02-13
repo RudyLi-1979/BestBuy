@@ -1,6 +1,61 @@
 # Walkthrough: BestBuy Scanner App Development
 
-## 最新完成：階段一個人化推薦功能 (2026-02-12)
+## 最新完成：Chat-First 架構 + UCP Server + 新功能實作 (2026-02-13)
+
+### 功能概述
+成功將應用程式重構為 **Chat-First 架構**，整合 **Gemini 2.5 Flash AI** 和本地 **UCP Server**，提供智能對話購物體驗。
+
+### 已完成的核心功能
+
+#### 1. Chat Mode 成為主要功能 ✅
+- **ChatActivity** 為應用程式啟動畫面（LAUNCHER）
+- **語音輸入**: 使用 Speech Recognition API
+- **掃描按鈕**: 點擊啟動 MainActivity 進行條碼掃描
+- **返回機制**: MainActivity 掃描後返回 ChatActivity
+
+#### 2. UCP Server 後端 ✅
+- **框架**: Python FastAPI
+- **AI 模型**: Gemini 2.5 Flash
+- **功能**: 
+  - Chat API (`/chat`) 處理對話
+  - Gemini Function Calling 執行搜尋、查詢庫存等操作
+  - 智能搜尋優化（規格篩選、關聯性評分）
+- **部署**: Cloudflare Tunnel (https://ucp.rudy.xx.kg)
+
+#### 3. 聊天產品卡片 ✅
+- **ChatProductAdapter**: 在聊天訊息中顯示產品卡片
+- **Horizontal RecyclerView**: 橫向滑動瀏覽產品
+- **點擊查看詳情**: 卡片點擊打開 ProductDetailActivity
+- **資料來源**: UCP Server /chat API 返回產品列表
+
+#### 4. 新功能實作 (2026-02-13) ✅
+
+**門市庫存查詢 (Store Availability)**
+- 查詢附近實體門市的產品庫存
+- 支援 ZIP code 定位
+- 顯示門市資訊、距離、庫存狀態
+- Gemini function: `check_store_availability()`
+
+**Also Bought 推薦**
+- 顯示經常一起購買的商品
+- 交叉銷售功能
+- 提高平均訂單價值
+- Gemini function: `get_also_bought()`
+
+**進階搜尋 (Advanced Search)**
+- 多條件篩選：製造商、價格範圍、分類、運送選項、特價狀態
+- 智能規格匹配
+- 關聯性評分和排序
+- Gemini function: `advanced_product_search()`
+
+### 相關文件
+- `.github/copilot-instructions.md` - AI Agent 開發指南
+- `ucp_server/README.md` - UCP Server 設置指南
+- `BESTBUY_API_INTEGRATION_ANALYSIS.md` - Best Buy API 整合分析
+
+---
+
+## 階段一：個人化推薦功能 (2026-02-12)
 
 ### 功能概述
 成功實現基於用戶行為的個人化推薦系統，能夠追蹤用戶互動並生成個性化的商品推薦。

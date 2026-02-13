@@ -20,4 +20,12 @@
     <string name="both_available">Available Online and in Store</string>
     <string name="out_of_stock">Out of Stock</string>
     <string name="product_image">Product Image</string>
+    
+    <!-- Chat Mode -->
+    <string name="chat_mode">Chat Mode</string>
+    <string name="chat_hint">Ask me anything...</string>
+    <string name="send">Send</string>
+    <string name="voice_input">Voice Input</string>
+    <string name="scan_barcode">Scan Barcode</string>
+    <string name="ai_assistant">AI Shopping Assistant</string>
 </resources>
