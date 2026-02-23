@@ -1,29 +1,29 @@
-# UCP Server Docker 停止腳本
-# 使用方法: .\stop_docker.ps1 [選項]
-# 選項: -RemoveVolumes (移除資料卷)
+# UCP Server Docker Stop Script
+# Usage: .\stop_docker.ps1 [Options]
+# Options: -RemoveVolumes (Remove data volumes)
 
 param(
     [switch]$RemoveVolumes = $false
 )
 
 Write-Host "================================================" -ForegroundColor Cyan
-Write-Host "   UCP Server - Docker 停止腳本" -ForegroundColor Cyan
+Write-Host "   UCP Server - Docker Stop Script" -ForegroundColor Cyan
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 顯示當前運行的容器
-Write-Host "📊 當前容器狀態:" -ForegroundColor Yellow
+# Display currently running containers
+Write-Host "📊 Current container status:" -ForegroundColor Yellow
 docker-compose ps
 Write-Host ""
 
-# 停止容器
-Write-Host "🛑 正在停止 UCP Server..." -ForegroundColor Yellow
+# Stop containers
+Write-Host "🛑 Stopping UCP Server..." -ForegroundColor Yellow
 
 if ($RemoveVolumes) {
-    Write-Host "⚠️  將移除所有資料卷（包括資料庫）" -ForegroundColor Red
-    $confirm = Read-Host "確定要繼續嗎？(y/n)"
+    Write-Host "⚠️  All data volumes (including database) will be removed" -ForegroundColor Red
+    $confirm = Read-Host "Are you sure? (y/n)"
     if ($confirm -ne "y") {
-        Write-Host "❌ 已取消" -ForegroundColor Red
+        Write-Host "❌ Cancelled" -ForegroundColor Red
         exit 0
     }
     docker-compose down -v
@@ -33,13 +33,13 @@ if ($RemoveVolumes) {
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
-    Write-Host "✅ UCP Server 已停止" -ForegroundColor Green
+    Write-Host "✅ UCP Server stopped" -ForegroundColor Green
     Write-Host ""
     if (-not $RemoveVolumes) {
-        Write-Host "💾 資料已保留（資料庫、金鑰等）" -ForegroundColor Cyan
-        Write-Host "   如需完全移除，請使用: .\stop_docker.ps1 -RemoveVolumes" -ForegroundColor White
+        Write-Host "💾 Data preserved (database, keys, etc.)" -ForegroundColor Cyan
+        Write-Host "   For complete removal, use: .\stop_docker.ps1 -RemoveVolumes" -ForegroundColor White
     }
 } else {
     Write-Host ""
-    Write-Host "❌ 停止失敗！" -ForegroundColor Red
+    Write-Host "❌ Stop failed!" -ForegroundColor Red
 }

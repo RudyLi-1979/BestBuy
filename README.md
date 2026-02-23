@@ -1,71 +1,71 @@
 # BestBuy Scanner App
 
-一個功能完整的 **Chat-First** Android 購物應用程式，整合 **Gemini 2.5 Flash AI**、**Best Buy API** 和本地 **UCP Server**，提供智能對話購物體驗。
+A full-featured **Chat-First** Android shopping application that integrates **Gemini 2.5 Flash AI**, the **Best Buy API**, and a local **UCP Server** to provide an intelligent conversational shopping experience.
 
-## 🎯 核心特色
+## 🎯 Core Features
 
-### 💬 Chat Mode（主要功能）
-- **AI 智能助手**: 整合 Gemini 2.5 Flash，自然語言購物對話
-- **產品卡片顯示**: 聊天中直接顯示產品照片、價格和詳情
-- **語音輸入**: 支援語音搜尋產品
-- **多功能整合**: 在對話中完成搜尋、查詢庫存、加入購物車等操作
-- **本地 UCP Server**: Python FastAPI 後端，處理 AI 對話和 Best Buy API 整合
+### 💬 Chat Mode (Main Feature)
+- **AI Assistant**: Integrated with Gemini 2.5 Flash for natural language shopping conversations
+- **Product Card Display**: Directly shows product photos, prices, and details within the chat
+- **Voice Input**: Supports voice search for products
+- **Multi-functional Integration**: Complete actions like searching, checking inventory, and adding to cart within the conversation
+- **Local UCP Server**: A Python FastAPI backend that handles AI conversations and Best Buy API integration
 
-### 📱 傳統功能
-- 📷 **條碼掃描**: 使用 CameraX 和 ML Kit 進行即時條碼掃描
-- 🔍 **產品搜尋**: 透過 UPC 條碼搜尋 BestBuy 產品
-- 📊 **產品詳情**: 顯示完整的產品資訊，包括：
-  - 產品名稱、製造商、型號
-  - 價格資訊（含特價顯示）
-  - 產品圖片
-  - 詳細說明
-  - 庫存狀態
-  - 顧客評價
-  - 運送資訊
-- 🎯 **推薦商品**: 顯示相關推薦產品，點擊可查看詳細資訊
-- 👀 **其他人也看了**: 顯示其他顧客瀏覽的產品
-- ✨ **個人化推薦 (For You)**: 基於用戶瀏覽歷史的智能推薦
-  - 自動追蹤用戶行為（瀏覽、掃描、加入購物車）
-  - 分析用戶最喜歡的商品類別
-  - 基於類別偏好生成個人化推薦
-  - 過濾已瀏覽商品避免重複
-  - 最小互動次數門檻（5次）確保推薦品質
-- 🛒 **本地購物車**: 完整的購物車管理功能
-  - 新增商品到購物車
-  - 調整商品數量（+/-）
-  - 移除單一商品或清空購物車
-  - 即時顯示總金額
-  - 點擊購物車商品可查看詳細資訊
-  - 資料持久化（使用 Room Database）
-- 🏪 **門市庫存查詢**: 查詢附近實體門市的產品庫存（BOPIS）
-- 🛍️ **Also Bought 推薦**: 顯示經常一起購買的商品
-- 🔍 **進階搜尋**: 多條件篩選（製造商、價格範圍、運送選項等）
-- 🔄 **螢幕旋轉支援**: 旋轉裝置時保留產品資訊
-- 🌐 **Cloudflare Tunnel**: 全球可訪問的 UCP Server 連線
+### 📱 Traditional Features
+- 📷 **Barcode Scanning**: Real-time barcode scanning using CameraX and ML Kit
+- 🔍 **Product Search**: Search for BestBuy products via UPC barcode
+- 📊 **Product Details**: Displays complete product information, including:
+  - Product name, manufacturer, model number
+  - Price information (including sale price display)
+  - Product images
+  - Detailed description
+  - Stock status
+  - Customer reviews
+  - Shipping information
+- 🎯 **Recommended Products**: Displays related recommended products, clickable for more details
+- 👀 **Also Viewed**: Shows products viewed by other customers
+- ✨ **Personalized Recommendations (For You)**: Smart recommendations based on user browsing history
+  - Automatically tracks user behavior (viewing, scanning, adding to cart)
+  - Analyzes the user's favorite product categories
+  - Generates personalized recommendations based on category preferences
+  - Filters out previously viewed items to avoid repetition
+  - A minimum interaction threshold (5 times) ensures recommendation quality
+- 🛒 **Local Shopping Cart**: Complete shopping cart management functionality
+  - Add items to the shopping cart
+  - Adjust item quantity (+/-)
+  - Remove a single item or clear the entire cart
+  - Real-time display of the total amount
+  - Click on a cart item to view its details
+  - Data persistence (using Room Database)
+- 🏪 **Store Inventory Check**: Check product inventory at nearby physical stores (BOPIS)
+- 🛍️ **Also Bought Recommendations**: Displays items frequently bought together
+- 🔍 **Advanced Search**: Multi-condition filtering (manufacturer, price range, shipping options, etc.)
+- 🔄 **Screen Rotation Support**: Retains product information when the device is rotated
+- 🌐 **Cloudflare Tunnel**: Globally accessible UCP Server connection
 
-## 技術架構
+## Technical Architecture
 
 ### Android App
-- **語言**: Kotlin
-- **架構模式**: MVVM (Model-View-ViewModel)
+- **Language**: Kotlin
+- **Architecture Pattern**: MVVM (Model-View-ViewModel)
 - **UI**: XML Layouts with View Binding
-- **相機**: CameraX
-- **條碼掃描**: ML Kit Barcode Scanning
-- **網路請求**: Retrofit + OkHttp
-- **圖片載入**: Glide
-- **資料持久化**: Room Database v2
-- **非同步處理**: Kotlin Coroutines + Flow
-- **依賴注入**: Manual DI
+- **Camera**: CameraX
+- **Barcode Scanning**: ML Kit Barcode Scanning
+- **Networking**: Retrofit + OkHttp
+- **Image Loading**: Glide
+- **Data Persistence**: Room Database v2
+- **Asynchronous Processing**: Kotlin Coroutines + Flow
+- **Dependency Injection**: Manual DI
 
 ### UCP Server (Python Backend)
-- **框架**: FastAPI
-- **AI 模型**: Gemini 2.5 Flash
-- **資料庫**: SQLite (開發) / PostgreSQL (生產)
-- **API 整合**: Best Buy Developer API
-- **部署**: Cloudflare Tunnel (HTTPS)
-- **非同步**: asyncio + httpx
+- **Framework**: FastAPI
+- **AI Model**: Gemini 2.5 Flash
+- **Database**: SQLite (Development) / PostgreSQL (Production)
+- **API Integration**: Best Buy Developer API
+- **Deployment**: Cloudflare Tunnel (HTTPS)
+- **Asynchronous**: asyncio + httpx
 
-## 專案結構
+## Project Structure
 
 ```
 📁 BestBuy/
@@ -73,99 +73,99 @@
 │   └── src/main/java/com/bestbuy/scanner/
 │       ├── data/
 │       │   ├── api/
-│       │   │   ├── BestBuyApiService.kt      # API 介面定義
+│       │   │   ├── BestBuyApiService.kt      # API Interface Definition
 │       │   │   ├── UCPApiService.kt          # UCP Server API
-│       │   │   ├── RetrofitClient.kt         # Retrofit 配置
+│       │   │   ├── RetrofitClient.kt         # Retrofit Configuration
 │       │   │   └── UCPRetrofitClient.kt      # UCP Client
 │   │   ├── dao/
-│   │   │   ├── CartDao.kt                # 購物車資料存取層
-│   │   │   └── UserInteractionDao.kt     # 用戶互動資料存取層
+│   │   │   ├── CartDao.kt                # Cart Data Access Object
+│   │   │   └── UserInteractionDao.kt     # User Interaction Data Access Object
 │   │   ├── database/
 │   │   │   └── AppDatabase.kt            # Room Database (v2)
 │   │   ├── model/
-│   │   │   ├── Product.kt                # 產品資料模型
-│   │   │   ├── CartItem.kt               # 購物車項目資料模型
-│   │   │   └── UserInteraction.kt        # 用戶互動資料模型
+│   │   │   ├── Product.kt                # Product Data Model
+│   │   │   ├── CartItem.kt               # Cart Item Data Model
+│   │   │   └── UserInteraction.kt        # User Interaction Data Model
 │   │   ├── recommendation/
-│   │   │   └── RecommendationEngine.kt   # 推薦引擎
+│   │   │   └── RecommendationEngine.kt   # Recommendation Engine
 │   │   └── repository/
-│   │       ├── ProductRepository.kt      # 產品資料儲存庫
-│   │       ├── CartRepository.kt         # 購物車資料儲存庫
-│   │       ├── UserBehaviorRepository.kt # 用戶行為儲存庫
-│   │       └── RecommendationRepository.kt # 推薦儲存庫
+│   │       ├── ProductRepository.kt      # Product Data Repository
+│   │       ├── CartRepository.kt         # Cart Data Repository
+│   │       ├── UserBehaviorRepository.kt # User Behavior Repository
+│   │       └── RecommendationRepository.kt # Recommendation Repository
 │       ├── ui/
 │       │   ├── adapter/
-│       │   │   ├── ChatAdapter.kt            # 聊天訊息 Adapter
-│       │   │   ├── ChatProductAdapter.kt     # 聊天產品卡片
-│       │   │   ├── RecommendationAdapter.kt  # 推薦商品 Adapter
+│       │   │   ├── ChatAdapter.kt            # Chat Message Adapter
+│       │   │   ├── ChatProductAdapter.kt     # Chat Product Card
+│       │   │   ├── RecommendationAdapter.kt  # Recommended Product Adapter
 │       │   │   ├── PersonalizedRecommendationAdapter.kt
-│       │   │   └── CartAdapter.kt            # 購物車 Adapter
+│       │   │   └── CartAdapter.kt            # Cart Adapter
 │       │   ├── viewmodel/
-│       │   │   ├── ChatViewModel.kt          # 聊天 ViewModel
-│       │   │   ├── ProductViewModel.kt       # 產品 ViewModel
-│       │   │   ├── CartViewModel.kt          # 購物車 ViewModel
+│       │   │   ├── ChatViewModel.kt          # Chat ViewModel
+│       │   │   ├── ProductViewModel.kt       # Product ViewModel
+│       │   │   ├── CartViewModel.kt          # Cart ViewModel
 │       │   │   └── RecommendationViewModel.kt
-│       │   ├── ChatActivity.kt           # 主畫面 (Chat Mode)
-│       │   ├── MainActivity.kt           # 掃描畫面
-│       │   ├── ProductDetailActivity.kt  # 產品詳情頁
-│       │   └── CartActivity.kt           # 購物車頁面
+│       │   ├── ChatActivity.kt           # Main Screen (Chat Mode)
+│       │   ├── MainActivity.kt           # Scanner Screen
+│       │   ├── ProductDetailActivity.kt  # Product Detail Page
+│       │   └── CartActivity.kt           # Cart Page
 │
 ├── 🐍 ucp_server/ (Python Backend)
 │   ├── app/
-│   │   ├── main.py                       # FastAPI 入口
-│   │   ├── config.py                     # 配置
-│   │   ├── models/                       # 資料模型
-│   │   ├── schemas/                      # Pydantic 驗證
+│   │   ├── main.py                       # FastAPI Entrypoint
+│   │   ├── config.py                     # Configuration
+│   │   ├── models/                       # Data Models
+│   │   ├── schemas/                      # Pydantic Schemas
 │   │   ├── services/
 │   │   │   ├── bestbuy_client.py         # Best Buy API Client
 │   │   │   ├── gemini_client.py          # Gemini AI Client
-│   │   │   └── chat_service.py           # Chat 處理服務
+│   │   │   └── chat_service.py           # Chat Processing Service
 │   │   └── api/
-│   │       └── chat.py                   # Chat API 端點
+│   │       └── chat.py                   # Chat API Endpoint
 │   ├── requirements.txt
 │   └── README.md
 │   └── utils/
-│       └── BarcodeScannerAnalyzer.kt     # 條碼掃描分析器
+│       └── BarcodeScannerAnalyzer.kt     # Barcode Scanning Analyzer
 └── src/main/res/
     ├── layout/
-    │   ├── activity_main.xml             # 主畫面佈局
-    │   ├── activity_product_detail.xml   # 產品詳情佈局
-    │   ├── activity_cart.xml             # 購物車佈局
-    │   ├── item_product_recommendation.xml # 推薦商品項目
-    │   ├── item_recommendation_card.xml   # 個人化推薦卡片
-    │   └── item_cart.xml                 # 購物車商品項目
+    │   ├── activity_main.xml             # Main screen layout
+    │   ├── activity_product_detail.xml   # Product detail layout
+    │   ├── activity_cart.xml             # Cart layout
+    │   ├── item_product_recommendation.xml # Recommended product item
+    │   ├── item_recommendation_card.xml   # Personalized recommendation card
+    │   └── item_cart.xml                 # Cart item layout
     └── values/
         ├── colors.xml
         ├── strings.xml
         └── themes.xml
 ```
 
-## 安裝與設定
+## Setup and Configuration
 
-### 1. 前置需求
+### 1. Prerequisites
 
 **Android App:**
-- Android Studio Arctic Fox 或更新版本
-- Android SDK 24 或以上
-- BestBuy API Key ([註冊取得](https://developer.bestbuy.com/))
+- Android Studio Arctic Fox or later version
+- Android SDK 24 or higher
+- BestBuy API Key ([Register to Get](https://developer.bestbuy.com/))
 
 **UCP Server:**
 - Python 3.11+
-- pip (Python 套件管理器)
+- pip (Python Package Manager)
 - Gemini API Key
 
-### 2. 設定 Android App
+### 2. Configure Android App
 
-#### 2.1 設定 Best Buy API Key
+#### 2.1 Configure Best Buy API Key
 
-在專案根目錄的 `.env` 檔案中，將 `YOUR_API_KEY_HERE` 替換為你的 BestBuy API Key：
+In the `.env` file at the project root, replace `YOUR_API_KEY_HERE` with your BestBuy API Key:
 
 ```bash
 # .env
-BESTBUY_API_KEY=你的實際API_KEY
+BESTBUY_API_KEY=your_actual_API_KEY
 ```
 
-如果 `.env` 檔案不存在，請複製 `.env.example` 並重新命名為 `.env`：
+If the `.env` file does not exist, copy `.env.example` and rename it to `.env`:
 
 ```bash
 # Windows
@@ -175,178 +175,184 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-**安全提示**: `.env` 檔案已加入 `.gitignore`，確保你的 API Key 不會被提交到版本控制系統。
+**Security Note**: The `.env` file has been added to `.gitignore` to ensure your API Key will not be committed to the version control system.
 
-#### 2.2 建置 Android 專案
+#### 2.2 Build Android Project
 
 ```bash
-# 克隆專案後，在 Android Studio 中開啟
-# 等待 Gradle 同步完成
+# After cloning the project, open in Android Studio
+# Wait for Gradle sync to complete
 
-# 或使用命令列建置
+# Or use command line to build
 ./gradlew build
 ```
 
-### 3. 設定 UCP Server
+### 3. Configure UCP Server
 
-#### 3.1 安裝依賴
+#### 3.1 Install Dependencies
 
-**使用 Docker（推薦）：**
+**Using Docker (Recommended):**
 ```bash
 cd ucp_server
 
-# 配置環境變數
+# Configure environment variables
 copy .env.example .env
-# 編輯 .env 填入 API Keys
+# Edit .env to fill in API Keys
 
-# 啟動服務
+# Start service
 .\start_docker.ps1
-# 或使用 docker-compose up -d
+# Or use docker-compose up -d
 ```
 
-**本地開發模式：**
+**Local Development Mode:**
 ```bash
 cd ucp_server
 
-# 建立虛擬環境
+# Create virtual environment
 python -m venv venv
 
-# 啟動虛擬環境 (Windows)
+# Activate virtual environment (Windows)
 .\venv\Scripts\activate
 
-# 啟動虛擬環境 (Linux/Mac)
+# Activate virtual environment (Linux/Mac)
 source venv/bin/activate
 
-# 安裝依賴
+# Install dependencies
 pip install -r requirements.txt
 ```
-**Docker 模式：**
+
+**Docker Mode:**
 ```bash
-# 使用快速腳本
+# Use quick script
 .\start_docker.ps1
 
-# 或直接使用 docker-compose
+# Or use docker-compose directly
 docker-compose up -d
 
-# 查看日誌
+# View logs
 docker-compose logs -f
 ```
 
-**本地模式：**
+**Local Mode:**
 ```bash
-# 使用 PowerShell 腳本
+# Use PowerShell script
 .\start_server.ps1
 
-# 或直接使用 uvicorn
+# Or use uvicorn directly
 uvicorn app.main:app --reload --port 58000
 ```
 
-Server 將在 `http://localhost:5_API_KEY
-# GEMINI_API_KEY=你的Gemini_API_KEY
+**Server will start at `http://localhost:58000`.**
+
+**Environment Configuration:**
+```bash
+# Configure in ucp_server/.env
+BESTBUY_API_KEY=your_bestbuy_api_key
+# GEMINI_API_KEY=your_gemini_api_key
 ```
 
-#### 3.3 啟動 Server
+#### 3.3 Start Server
 
 ```bash
-# 開發模式
+# Development mode
 uvicorn app.main:app --reload --port 8000
 
-# 或使用提供的腳本
+# Or use the provided script
 .\start_server.ps1
 ```
 
-Server 將在 `http://localhost:8000` 啟動。
+The server will start at `http://localhost:8000`.
 
-#### 3.4 Cloudflare Tunnel (可選)
+#### 3.4 Cloudflare Tunnel (Optional)
 
-如果需要從實體裝置存取 UCP Server，可以使用 Cloudflare Tunnel：
+If you need to access the UCP Server from physical devices, you can use Cloudflare Tunnel:
 
 ```bash
-# 安裝 cloudflared
-# 查看 ucp_server/README.md 了解詳細設定
+# Install cloudflared
+# See ucp_server/README.md for detailed configuration
 ```
 
-### 4. 執行應用程式
+### 4. Run Application
 
-1. 連接 Android 裝置或啟動模擬器
-2. 點擊 Android Studio 的 "Run" 按鈕
-3. 授予相機權限
-4. 開始掃描條碼！
+1. Connect Android device or start emulator
+2. Click "Run" button in Android Studio
+3. Grant camera permissions
+4. Start scanning barcodes!
 
-## 使用方式
+## Usage
 
-### Chat Mode (主要功能)
+### Chat Mode (Main Feature)
 
-1. 開啟應用程式，自動進入 Chat Mode
-2. 輸入文字或使用語音搜尋產品
-   - 例：「我想買 iPhone 15 Pro」
-   - 例：「Show me MacBook Pro 14 inch」
-   - 例：「哪裡可以買到 Mac mini?」
-3. AI 助手會對話式回答並顯示產品卡片
-4. 點擊產品卡片查看完整詳情
-5. 在詳情頁可以加入購物車或查看更多資訊
+1. Open the app, automatically enter Chat Mode
+2. Input text or use voice to search for products
+   - Example: "I want to buy iPhone 15 Pro"
+   - Example: "Show me MacBook Pro 14 inch"
+   - Example: "Where can I buy Mac mini?"
+3. AI assistant will answer conversationally and display product cards
+4. Click product cards to view complete details
+5. On detail page, add to cart or view more information
 
-### 掃描條碼
+### Scan Barcode
 
-1. 在 Chat Mode 中點擊「📷 Scan」按鈕
-2. 授予相機權限
-3. 將相機對準商品條碼
-4. 應用程式會自動掃描並搜尋產品
-5. 找到產品後自動跳轉到詳情頁
+1. In Chat Mode, click the '📷 Scan' button
+2. Grant camera permissions
+3. Point camera at product barcode
+4. The app will automatically scan and search for products
+5. After finding product, automatically navigate to detail page
 
-### 手動輸入
+### Manual Input
 
-如果無法掃描條碼，可以點擊「手動輸入 UPC」按鈕，直接輸入產品的 UPC 代碼。
+If you cannot scan a barcode, you can click the 'Manual Input UPC' button to directly input the product's UPC code.
 
-### 瀏覽產品詳情
+### View Product Details
 
-- 查看產品圖片、價格、說明
-- 查看推薦商品和其他人也看了的商品
-- 點擊推薦商品可查看更多產品
-- 點擊「在 BestBuy 查看」可前往官網
-- 點擊「加入購物車」可直接購買
+- View product images, prices, and descriptions
+- View recommended products and items viewed by others
+- Click recommended products to view more items
+- Click 'View on BestBuy' to go to the official website
+- Click 'Add to Cart' to make a direct purchase
 
-## BestBuy API 使用說明
+## BestBuy API Usage Guide
 
-### API 端點
+### API Endpoints
 
-本應用程式使用以下 BestBuy API 端點：
+This application uses the following BestBuy API endpoints:
 
-1. **產品搜尋 (UPC)**
+1. **Product Search (UPC)**
    - `GET /v1/products(upc={upc})?apiKey={key}`
-   - 透過 UPC 條碼搜尋產品
+   - Search for products via UPC barcode
 
-2. **產品詳情 (SKU)**
+2. **Product Details (SKU)**
    - `GET /v1/products/{sku}.json?apiKey={key}`
-   - 透過 SKU 取得產品詳細資訊
+   - Get detailed product information via SKU
 
-3. **推薦商品**
+3. **Product Recommendations**
    - `GET /v1/products/{sku}/recommendations.json?apiKey={key}`
-   - 取得產品的推薦商品列表
+   - Get the product's recommendation list
 
-4. **Also Viewed (其他人也看了)**
+4. **Also Viewed (Other Customers Viewed)**
    - `GET /v1/products/{sku}/alsoViewed.json?apiKey={key}`
-   - 取得其他顧客瀏覽的相關產品
+   - Get related products viewed by other customers
 
-### API 限制
+### API Limits
 
-- 免費版 API 有請求限制（每秒 5 次，每天 50,000 次）
-- 請勿在生產環境中硬編碼 API Key
-- 建議使用環境變數或安全的密鑰管理系統
+- Free tier API has request limits (5 requests per second, 50,000 per day)
+- Do not hardcode the API Key in production environment
+- It is recommended to use environment variables or a secure key management system
 
-## 權限說明
+## Permissions Description
 
-應用程式需要以下權限：
+The application requires the following permissions:
 
-- `CAMERA`: 用於掃描條碼
-- `INTERNET`: 用於存取 BestBuy API
-- `ACCESS_NETWORK_STATE`: 檢查網路連線狀態
+- `CAMERA`: Used to scan barcodes
+- `INTERNET`: Used to access BestBuy API
+- `ACCESS_NETWORK_STATE`: Check network connection status
 
-## 支援的條碼格式
+## Supported Barcode Formats
 
-ML Kit 支援以下條碼格式：
-- UPC-A 和 UPC-E
-- EAN-8 和 EAN-13
+ML Kit supports the following barcode formats:
+- UPC-A and UPC-E
+- EAN-8 and EAN-13
 - Code-39
 - Code-93
 - Code-128
@@ -357,101 +363,101 @@ ML Kit 支援以下條碼格式：
 - PDF417
 - Aztec
 
-## 常見問題
+## FAQ
 
-### Q: 掃描條碼後沒有找到產品？
+### Q: Product not found after scanning barcode?
 
-A: 可能的原因：
-1. 產品不在 BestBuy 資料庫中
-2. UPC 代碼不正確
-3. 網路連線問題
-4. API Key 未正確設定
+A: Possible reasons:
+1. Product is not in the BestBuy database
+2. UPC code is incorrect
+3. Network connection issues
+4. API Key is not properly configured
 
-### Q: 相機無法啟動？
+### Q: Camera cannot start?
 
-A: 請確認：
-1. 已授予相機權限
-2. 裝置有可用的相機
-3. 沒有其他應用程式正在使用相機
+A: Please confirm:
+1. Camera permissions are granted
+2. Device has an available camera
+3. No other applications are using the camera
 
-### Q: 推薦商品沒有顯示？
+### Q: Recommended products are not displayed?
 
-A: BestBuy API 並非所有產品都有推薦商品資料，這是正常現象。
+A: BestBuy API does not have recommendation data for all products, this is normal.
 
-## 最新更新
+## Latest Updates
 
-### ✨ Chat-First 架構重構 + UCP Server 整合 (2026-02-13)
+### ✨ Chat-First Architecture Restructure + UCP Server Integration (2026-02-13)
 
-**Chat Mode 成為主要功能：**
-- ✅ ChatActivity 為應用程式主畫面
-- ✅ 語音輸入支援（Speech Recognition API）
-- ✅ 掃描按鈕啟動 MainActivity
-- ✅ 聊天中顯示產品卡片，點擊查看詳情
+**Chat Mode Becomes Main Feature:**
+- ✅ ChatActivity is the main screen of the app
+- ✅ Voice input support (Speech Recognition API)
+- ✅ Scan button launches MainActivity
+- ✅ Display product cards in chat, click to view details
 
-**UCP Server 後端：**
-- ✅ Python FastAPI + Gemini 2.5 Flash 整合
-- ✅ 智能搜尋優化（規格篩選、關聯性評分）
-- ✅ Cloudflare Tunnel 全球可訪問
-- ✅ 對話歷史管理
-- ✅ 函式呼叫（Function Calling）
+**UCP Server Backend:**
+- ✅ Python FastAPI + Gemini 2.5 Flash Integration
+- ✅ Intelligent search optimization (specification filtering, relevance scoring)
+- ✅ Cloudflare Tunnel globally accessible
+- ✅ Chat history management
+- ✅ Function Calling
 
-**新功能 (2026-02-13)：**
-- ✅ **門市庫存查詢**: 查詢附近實體門市的產品庫存（BOPIS）
-- ✅ **Also Bought 推薦**: 顯示經常一起購買的商品
-- ✅ **進階搜尋**: 多條件篩選（製造商、價格範圍、運送選項、特價等）
+**New Features (2026-02-13):**
+- ✅ **Store Inventory Query**: Query product inventory at nearby physical stores (BOPIS)
+- ✅ **Also Bought Recommendations**: Display products frequently purchased together
+- ✅ **Advanced Search**: Multi-criteria filtering (manufacturer, price range, shipping options, special offers, etc.)
 
-### ✨ 階段一：個人化推薦功能 (2026-02-12)
+### ✨ Phase 1: Personalized Recommendation Feature (2026-02-12)
 
-成功實現基於用戶行為的個人化推薦系統：
+Successfully implemented a personalized recommendation system based on user behavior:
 
-**核心功能：**
-- ✅ 自動追蹤用戶行為（VIEW, SCAN, ADD_TO_CART）
-- ✅ 分析用戶最喜歡的商品類別
-- ✅ 基於類別偏好生成個人化推薦
-- ✅ 過濾已瀏覽商品避免重複
-- ✅ 最小互動次數門檻（5次）確保推薦品質
+**Core Features:**
+- ✅ Automatically track user behavior (VIEW, SCAN, ADD_TO_CART)
+- ✅ Analyze user's favorite product categories
+- ✅ Generate personalized recommendations based on category preferences
+- ✅ Filter viewed products to avoid duplicates
+- ✅ Minimum interaction threshold (5 times) to ensure recommendation quality
 
-**技術實現：**
-- Room Database v2（新增 UserInteraction 表）
-- RecommendationEngine（推薦演算法）
-- UserBehaviorRepository（行為追蹤）
-- "For You" UI 區塊（個人化推薦顯示）
+**Technical Implementation:**
+- Room Database v2 (Added UserInteraction table)
+- RecommendationEngine (Recommendation algorithm)
+- UserBehaviorRepository (Behavior tracking)
+- 'For You' UI Block (Personalized recommendation display)
 
-**相關文件：**
-- [Walkthrough.md](Walkthrough.md) - 完整開發歷程
-- [ARCHITECTURE.md](ARCHITECTURE.md) - 架構說明
-- [SECURITY.md](SECURITY.md) - API Key 安全指南
+**Related Documents:**
+- [Walkthrough.md](Walkthrough.md) - Complete development history
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Architecture description
+- [SECURITY.md](SECURITY.md) - API Key security guide
 
-## 未來改進方向
+## Future Improvements
 
-- [x] 個人化推薦系統（階段一已完成）
-- [ ] 協同過濾推薦（階段二）
-- [ ] 機器學習模型整合（階段三）
-- [ ] 加入產品比較功能
-- [ ] 支援歷史記錄
-- [ ] 加入最愛清單
-- [ ] 支援價格追蹤和通知
-- [ ] 整合更多電商平台 API
-- [ ] 加入深色模式
-- [ ] 支援多語言
-- [ ] 優化 UI/UX 設計
-- [ ] 加入快取機制減少 API 請求
+- [x] Personalized recommendation system (Phase 1 completed)
+- [ ] Collaborative filtering recommendations (Phase 2)
+- [ ] Machine learning model integration (Phase 3)
+- [ ] Add product comparison feature
+- [ ] Support browsing history
+- [ ] Add favorites list
+- [ ] Support price tracking and notifications
+- [ ] Integrate more e-commerce platform APIs
+- [ ] Add dark mode
+- [ ] Support multiple languages
+- [ ] Optimize UI/UX design
+- [ ] Add caching mechanism to reduce API requests
 
-## 授權
+## License
 
-本專案僅供學習和參考使用。
+This project is for learning and reference purposes only.
 
-## 相關連結
+## Related Links
 
-- [BestBuy API 文件](https://bestbuyapis.github.io/api-documentation/)
+- [BestBuy API Documentation](https://bestbuyapis.github.io/api-documentation/)
 - [ML Kit Barcode Scanning](https://developers.google.com/ml-kit/vision/barcode-scanning)
 - [CameraX](https://developer.android.com/training/camerax)
 - [Retrofit](https://square.github.io/retrofit/)
 
-## 聯絡方式
+## Contact
 
-如有問題或建議，歡迎提出 Issue 或 Pull Request。
+If you have any questions or suggestions, feel free to submit an Issue or Pull Request.
 
 ---
 
-**注意**: 請確保遵守 BestBuy API 的使用條款和限制。
+**Note**: Please ensure you comply with BestBuy API's terms of service and restrictions.

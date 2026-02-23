@@ -233,7 +233,7 @@ class ProductDetailActivity : AppCompatActivity() {
             binding.tvModelNumber.visibility = View.GONE
         }
         
-        // 價格
+        // Price
         val priceFormat = NumberFormat.getCurrencyInstance(Locale.US)
         if (product.onSale == true && product.salePrice != null) {
             binding.tvPrice.text = priceFormat.format(product.salePrice)
@@ -248,7 +248,7 @@ class ProductDetailActivity : AppCompatActivity() {
             binding.tvOnSale.visibility = View.GONE
         }
         
-        // 產品圖片
+        // Product image
         val imageUrl = product.largeFrontImage ?: product.image ?: product.mediumImage
         if (!imageUrl.isNullOrEmpty()) {
             Glide.with(this)

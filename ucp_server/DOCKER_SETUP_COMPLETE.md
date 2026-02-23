@@ -1,85 +1,85 @@
-# UCP Server Docker 化完成
+# UCP Server Dockerization Complete
 
-**日期**: 2026-02-13  
-**狀態**: ✅ 完成
+**Date**: 2026-02-13  
+**Status**: ✅ Complete
 
-## 變更摘要
+## Change Summary
 
-UCP Server 現已支援 Docker 容器化部署，使用端口 **58000**。
+The UCP Server now supports Docker containerized deployment, using port **58000**.
 
-## 新增檔案
+## New Files
 
 ### 1. **Dockerfile**
-- 基於 Python 3.11-slim
-- 自動安裝所有依賴
-- 暴露端口 58000
-- 包含健康檢查
-- 自動創建必要目錄
+- Based on Python 3.11-slim
+- Automatically installs all dependencies
+- Exposes port 58000
+- Includes a health check
+- Automatically creates necessary directories
 
 ### 2. **docker-compose.yml**
-- 服務名稱: `ucp-server`
-- 容器名稱: `bestbuy-ucp-server`
-- 端口映射: `58000:58000`
-- 自動載入 `.env` 環境變數
-- 持久化資料卷:
-  - 資料庫 (`ucp_bestbuy.db`)
-  - 金鑰目錄 (`keys/`)
-- 支援熱重載（開發模式）
+- Service name: `ucp-server`
+- Container name: `bestbuy-ucp-server`
+- Port mapping: `58000:58000`
+- Automatically loads `.env` environment variables
+- Persistent volumes:
+  - Database (`ucp_bestbuy.db`)
+  - Keys directory (`keys/`)
+- Supports hot-reloading (in development mode)
 
 ### 3. **.dockerignore**
-- 排除不必要的檔案
-- 減少映像大小
-- 提高建置速度
+- Excludes unnecessary files
+- Reduces image size
+- Improves build speed
 
-### 4. **start_docker.ps1** (快速啟動腳本)
-- 自動檢查 Docker Desktop 狀態
-- 自動檢查 .env 文件
-- 檢查端口佔用
-- 清理舊容器
-- 建立並啟動新容器
-- 顯示啟動狀態和常用命令
+### 4. **start_docker.ps1** (Quick Start Script)
+- Automatically checks Docker Desktop status
+- Automatically checks for the .env file
+- Checks for port conflicts
+- Cleans up old containers
+- Builds and starts new containers
+- Displays startup status and common commands
 
-### 5. **stop_docker.ps1** (停止腳本)
-- 優雅停止容器
-- 可選：移除資料卷
-- 顯示當前狀態
+### 5. **stop_docker.ps1** (Stop Script)
+- Gracefully stops containers
+- Optional: remove volumes
+- Displays the current status
 
-## 更新檔案
+## Updated Files
 
 ### 1. **ucp_server/README.md**
-- 新增 Docker 快速啟動章節（推薦方式）
-- 保留本地開發模式說明
-- 新增 Docker 開發指南
-- 新增故障排除章節
-- 新增 Cloudflare Tunnel 配置說明
-- 新增監控與日誌章節
+- Added Docker Quick Start section (recommended method)
+- Kept local development mode instructions
+- Added Docker development guide
+- Added troubleshooting section
+- Added Cloudflare Tunnel configuration instructions
+- Added monitoring and logs section
 
 ### 2. **根目錄/QUICKSTART.md**
-- 更新 UCP Server 設定部分
-- 新增方法 1: Docker（推薦）
-- 保留方法 2: 本地開發模式
-- 統一使用端口 58000
+- Updated UCP Server setup section
+- Added Method 1: Docker (Recommended)
+- Kept Method 2: Local Development Mode
+- Standardized on port 58000
 
 ### 3. **根目錄/README.md**
-- 更新 UCP Server 安裝說明
-- 新增 Docker 安裝步驟
-- 統一使用端口 58000
+- Updated UCP Server installation instructions
+- Added Docker installation steps
+- Standardized on port 58000
 
-## 使用方式
+## How to Use
 
-### 快速啟動（推薦）
+### Quick Start (Recommended)
 
 ```powershell
 cd ucp_server
 
-# 1. 配置環境變數
+# 1. Configure environment variables
 copy .env.example .env
-# 編輯 .env 填入 API Keys
+# Edit .env and fill in API Keys
 
-# 2. 啟動服務
+# 2. Start the service
 .\start_docker.ps1
 
-# 3. 訪問服務
+# 3. Access the service
 # http://localhost:58000
 ```
 

@@ -4,7 +4,7 @@ plugins {
     id("com.google.devtools.ksp") version "1.9.22-1.0.17"
 }
 
-// 讀取 .env 檔案
+// Read .env file
 val dotenv = mutableMapOf<String, String>()
 val envFile = rootProject.file(".env")
 if (envFile.exists()) {
@@ -32,7 +32,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        // 從 .env 檔案讀取 BestBuy API Key
+        // Read BestBuy API Key from .env file
         val apiKey = dotenv["BESTBUY_API_KEY"] ?: "YOUR_API_KEY_HERE"
         buildConfigField("String", "BESTBUY_API_KEY", "\"$apiKey\"")
     }

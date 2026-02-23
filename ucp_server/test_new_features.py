@@ -17,7 +17,7 @@ import json
 async def test_store_availability():
     """Test store availability query (BOPIS)"""
     print("\n" + "="*80)
-    print("TEST 1: Store Availability Query (門市庫存查詢)")
+    print("TEST 1: Store Availability Query (In-Store Inventory Check)")
     print("="*80)
     
     client = BestBuyAPIClient()
@@ -59,7 +59,7 @@ async def test_store_availability():
 async def test_also_bought():
     """Test also-bought recommendations"""
     print("\n" + "="*80)
-    print("TEST 2: Also Bought Recommendations (alsoBought 推薦)")
+    print("TEST 2: Also Bought Recommendations (alsoBought Product Recommendations)")
     print("="*80)
     
     client = BestBuyAPIClient()
@@ -92,7 +92,7 @@ async def test_also_bought():
 async def test_advanced_search():
     """Test advanced search with filters"""
     print("\n" + "="*80)
-    print("TEST 3: Advanced Search (進階搜尋操作符)")
+    print("TEST 3: Advanced Search (Advanced Search Operators)")
     print("="*80)
     
     client = BestBuyAPIClient()

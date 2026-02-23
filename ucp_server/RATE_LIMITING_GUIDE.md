@@ -1,121 +1,121 @@
 # API Rate Limiting Guide
 
-## Best Buy API 限制
+## Best Buy API Limits
 
-| 限制類型 | 數值 | 說明 |
-|---------|------|------|
-| **每秒請求數** | 5 requests/second | 短期限制 |
-| **每日請求數** | 50,000 requests/day | 長期限制 |
+| Limit Type | Value | Description |
+|---|---|---|
+| **Requests per second** | 5 requests/second | Short-term limit |
+| **Requests per day** | 50,000 requests/day | Long-term limit |
 
-## RateLimiter 實現
+## RateLimiter Implementation
 
-UCP Server 自動在所有 Best Buy API 調用中應用速率限制：
+The UCP Server automatically applies rate limiting to all Best Buy API calls:
 
 ```python
 class BestBuyAPIClient:
     def __init__(self):
-        # 自動初始化 RateLimiter (5 req/s, 50k req/day)
+        # Automatically initialize RateLimiter (5 req/s, 50k req/day)
         self.rate_limiter = RateLimiter(
             requests_per_second=5,
             requests_per_day=50000
         )
     
     async def search_products(self, query):
-        # 每個 API 方法開始時自動等待速率限制
+        # Automatically wait for the rate limiter at the start of each API method
         await self.rate_limiter.acquire()
-        # ... 進行 API 調用
+        # ... make the API call
 ```
 
-### 工作原理
+### How It Works
 
-1. **Token Bucket 算法**: 使用滑動窗口追蹤最近 1 秒內的請求
-2. **自動等待**: 如果達到限制，自動 sleep 直到可以進行下一個請求
-3. **每日追蹤**: 追蹤 24 小時內的總請求數
+1. **Token Bucket Algorithm**: Uses a sliding window to track requests in the last second.
+2. **Automatic Waiting**: If the limit is reached, it automatically sleeps until the next request can be made.
+3. **Daily Tracking**: Tracks the total number of requests within a 24-hour period.
 
-## 測試時的注意事項
+## Notes for Testing
 
-### ✅ 良好實踐
+### ✅ Good Practices
 
 ```python
-# 1. RateLimiter 自動處理（無需手動等待）
+# 1. RateLimiter handles it automatically (no manual waiting needed)
 client = BestBuyAPIClient()
-result1 = await client.search_products("iPhone")  # RateLimiter 自動應用
-result2 = await client.search_products("MacBook") # RateLimiter 自動應用
+result1 = await client.search_products("iPhone")  # RateLimiter is applied automatically
+result2 = await client.search_products("MacBook") # RateLimiter is applied automatically
 
-# 2. 在測試之間添加額外延遲（推薦）
-await asyncio.sleep(0.3)  # 在不同類型的測試之間
+# 2. Add extra delay between tests (recommended)
+await asyncio.sleep(0.3)  # Between different types of tests
 
-# 3. 減少測試中的 page_size
-result = await client.search_products("laptop", page_size=2)  # 而非 10
+# 3. Reduce page_size in tests
+result = await client.search_products("laptop", page_size=2)  # instead of 10
 ```
 
-### ❌ 應避免
+### ❌ To Avoid
 
 ```python
-# ❌ 不要繞過 RateLimiter
-# 錯誤：直接使用 httpx 而不是 BestBuyAPIClient
+# ❌ Do not bypass the RateLimiter
+# Wrong: Using httpx directly instead of BestBuyAPIClient
 async with httpx.AsyncClient() as client:
     response = await client.get("https://api.bestbuy.com/...")
 
-# ❌ 不要在循環中快速調用多次
+# ❌ Do not call rapidly multiple times in a loop
 for i in range(10):
-    await client.search_products(f"product{i}")  # RateLimiter 會處理，但測試會變慢
+    await client.search_products(f"product{i}")  # The RateLimiter will handle it, but the test will slow down
 
-# ❌ 不要使用過大的 page_size
-result = await client.search_products("laptop", page_size=100)  # 浪費 quota
+# ❌ Do not use an overly large page_size
+result = await client.search_products("laptop", page_size=100)  # Wastes quota
 ```
 
-## 測試腳本的速率限制
+## Rate Limiting in Test Scripts
 
-所有測試腳本都已更新以尊重速率限制：
+All test scripts have been updated to respect rate limits:
 
 ### 1. `test_rate_limiter.py`
-**用途**: 驗證 RateLimiter 正確強制執行 5 req/s 限制
+**Purpose**: Verify that the RateLimiter correctly enforces the 5 req/s limit
 
 ```bash
 python test_rate_limiter.py
 ```
 
-**預期輸出**:
-- 10 個請求應在 ~2.0 秒內完成
-- 任何 1 秒窗口內最多 5 個請求
+**Expected Output**:
+- 10 requests should complete in ~2.0 seconds
+- A maximum of 5 requests within any 1-second window
 
 ### 2. `test_categories.py`
-**更新**: 在每個測試之間添加 0.3 秒延遲
+**Update**: Added a 0.3-second delay between each test
 
 ```bash
 python test_categories.py
 ```
 
-**API 調用**: 5 次
-- 4 次 `search_categories`
-- 1 次 `advanced_search`
+**API calls**: 5 times
+- 4 times `search_categories`
+- 1 time `advanced_search`
 
-**預計時間**: ~2 秒（有延遲）
+**Estimated time**: ~2 seconds (with delay)
 
 ### 3. `test_categories_simple.py`
-**更新**: 在 API 調用之間添加 0.3 秒延遲
+**Update**: Added 0.3-second delay between API calls
 
 ```bash
 python test_categories_simple.py
 ```
 
-**API 調用**: 2 次
-**預計時間**: ~0.5 秒
+**API calls**: 2 times
+**Estimated time**: ~0.5 seconds
 
 ### 4. `test_gemini_categories.py`
-**更新**: 查詢之間間隔 1.0 秒
+**Update**: 1.0-second interval between queries
 
 ```bash
 python test_gemini_categories.py
 ```
 
-**API 調用**: 取決於 Gemini 的 function calls（通常 3-6 次）
-**預計時間**: ~3-5 秒
+**API calls**: Depends on Gemini function calls (usually 3-6 times)
+**Estimated time**: ~3-5 seconds
 
-## 監控 API 使用量
+## Monitoring API Usage
 
-### 檢查 RateLimiter 統計
+### Check RateLimiter Statistics
 
 ```python
 client = BestBuyAPIClient()
@@ -131,9 +131,9 @@ print(stats)
 # }
 ```
 
-### 日誌輸出
+### Log Output
 
-RateLimiter 會自動記錄：
+RateLimiter automatically logs:
 
 ```
 INFO     Rate limiter initialized: 5 req/s, 50000 req/day
@@ -142,105 +142,107 @@ DEBUG    Rate limit: 5/5 requests in last second. Waiting 0.234s
 WARNING  Daily limit reached (50000 requests). Waiting 1234.5s until reset
 ```
 
-## 錯誤處理
+## Error Handling
 
 ### HTTP 403 Over Quota
 
-如果看到此錯誤：
+If you see this error:
 
 ```
 HTTP error: Client error '403 Over Quota'
 ```
 
-**原因**: 超過每日 50,000 請求限制
+**Cause**: Exceeded daily 50,000 request limit
 
-**解決方案**:
-1. 等待每日重置（UTC 午夜）
-2. 檢查是否有其他服務使用相同 API key
-3. 考慮減少測試頻率或優化 API 調用
+**Solution**:
+1. Wait for daily reset (UTC midnight)
+2. Check if other services are using the same API key
+3. Consider reducing test frequency or optimizing API calls
 
 ### HTTP 429 Too Many Requests
 
-如果看到此錯誤：
+If you see this error:
 
 ```
 HTTP error: Client error '429 Too Many Requests'
 ```
 
-**原因**: 超過每秒 5 次請求限制（RateLimiter 失效或被繞過）
+**Cause**: Exceeded 5 requests per second limit (RateLimiter failed or bypassed)
 
-**解決方案**:
-1. 確保使用 `BestBuyAPIClient` 而非直接 API 調用
-2. 檢查是否有多個客戶端實例同時運行
-3. 增加測試之間的延遲
+**Solution**:
+1. Ensure using `BestBuyAPIClient` instead of direct API calls
+2. Check if multiple client instances are running simultaneously
+3. Increase delay between tests
 
-## 優化 API 使用
+## Optimizing API Usage
 
-### 1. 使用按需加載
+### 1. Use On-Demand Loading
 
 ```python
-# ❌ 舊方式：每次搜尋都獲取門市資訊（5+ API 調用）
+# ❌ Old way: Get store info every search (5+ API calls)
 products = await client.search_products("iPhone")
 for product in products:
     stores = await client.get_store_availability(product.sku, "94103")
 
-# ✅ 新方式：只在使用者請求時獲取門市資訊
+# ✅ New way: Only get store info when user asks
 products = await client.search_products("iPhone", page_size=2)
-# 只有當使用者明確要求時才：
+# Only when user explicitly requests:
 stores = await client.get_store_availability(selected_sku, zip_code)
 ```
 
-### 2. 減少預設結果數
+### 2. Reduce Default Result Count
 
 ```python
-# ❌ 舊設定：預設 10 個結果
-DEFAULT_PAGE_SIZE = 10  # 1 次搜尋 = 1 API 調用
+# ❌ Old setting: Default 10 results
+DEFAULT_PAGE_SIZE = 10  # 1 search = 1 API call
 
-# ✅ 新設定：預設 2 個結果
-DEFAULT_PAGE_SIZE = 2   # 節省 API quota，更快回應
+# ✅ New setting: Default 2 results
+DEFAULT_PAGE_SIZE = 2   # Save API quota, faster response
 ```
-### 4. 正確使用萬用字元
+
+### 3. Use Wildcards Correctly
 
 ```python
-# ✅ 正確：只使用結尾萬用字元
+# ✅ Correct: Only use trailing wildcard
 result = await client.search_categories(name="Laptop*")
 result = await client.search_categories(name="Phone*")
 
-# ❌ 錯誤：Best Buy API 不支援前導或兩邊萬用字元 (返回 400)
+# ❌ Wrong: Best Buy API doesn't support leading or both-sided wildcards (returns 400)
 result = await client.search_categories(name="*Phone*")
 result = await client.search_categories(name="*Laptop")
 ```
-### 3. 快取常用資料
+
+### 4. Cache Common Data
 
 ```python
-# 考慮快取分類列表（不常變動）
+# Consider caching categories list (doesn't change often)
 if not hasattr(self, '_categories_cache'):
     self._categories_cache = await client.get_categories()
 ```
 
-## 開發與生產環境
+## Development Vs Production Environments
 
-### 開發環境
-- 使用較小的 `page_size` (2-5)
-- 在測試之間添加延遲
-- 定期檢查 API 使用統計
+### Development Environment
+- Use smaller `page_size` (2-5)
+- Add delays between tests
+- Regularly check API usage statistics
 
-### 生產環境
-- RateLimiter 自動處理所有請求
-- 監控每日使用量警報 (例如 40k/50k)
-- 實施快取策略減少重複請求
+### Production Environment
+- RateLimiter automatically handles all requests
+- Monitor daily usage alerts (e.g. 40k/50k)
+- Implement caching strategy to reduce duplicate requests
 
-## 測試檢查清單
+## Testing Checklist
 
-在運行測試前：
+Before running tests:
 
-- [ ] 確認 `.env` 中有有效的 `BESTBUY_API_KEY`
-- [ ] 檢查今日是否還有 API quota (< 50,000 requests)
-- [ ] 測試使用小的 `page_size` 參數
-- [ ] 不要同時運行多個測試腳本
-- [ ] 觀察日誌確認 RateLimiter 正在工作
+- [ ] Confirm valid `BESTBUY_API_KEY` in `.env`
+- [ ] Check if API quota remains today (< 50,000 requests)
+- [ ] Tests use small `page_size` parameter
+- [ ] Don't run multiple test scripts simultaneously
+- [ ] Watch logs to confirm RateLimiter is working
 
 ---
 
-**更新日期**: 2026-02-13  
-**維護者**: UCP Server Team
+**Updated**: 2026-02-13  
+**Maintained by**: UCP Server Team

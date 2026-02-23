@@ -26,7 +26,7 @@ async def test_chat_with_store_availability():
     user_id = "test_user_123"
     
     test_messages = [
-        "我想找 MacBook Pro 14 吋，請問舊金山 94103 附近哪些門市有貨？",
+        "I want to find MacBook Pro 14-inch, which stores near San Francisco 94103 have inventory?",
         # Reduced to 1 query to conserve API quota
     ]
     
@@ -66,7 +66,7 @@ async def test_chat_with_also_bought():
     user_id = "test_user_123"
     
     test_messages = [
-        "我想買 MacBook Pro 14 吋，其他人通常還會買什麼？",
+        "I want to buy MacBook Pro 14-inch, what else do people usually buy?",
         # Reduced to 1 query to conserve API quota
     ]
     
@@ -101,7 +101,7 @@ async def test_chat_with_advanced_search():
     user_id = "test_user_123"
     
     test_messages = [
-        "我想找 Apple 的筆電，預算在 $2000 以下",
+        "I want to find Apple laptops under $2000",
         "Show me Samsung Galaxy phones",  # More specific keyword
         # Reduced to 2 queries to conserve API quota
     ]

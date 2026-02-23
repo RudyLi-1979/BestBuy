@@ -1,10 +1,10 @@
-# Chat API 測試腳本（PowerShell）
-# 使用 Invoke-RestMethod 測試 Chat API
+# Chat API Test Script (PowerShell)
+# Uses Invoke-RestMethod to test Chat API
 
-Write-Host "=== Chat API 測試 ===" -ForegroundColor Green
+Write-Host "=== Chat API Tests ===" -ForegroundColor Green
 
-# 測試 1: 發送第一條訊息
-Write-Host "`n[測試 1] 發送訊息給 AI 助手..." -ForegroundColor Cyan
+# Test 1: Send first message
+Write-Host "`n[Test 1] Sending message to AI assistant..." -ForegroundColor Cyan
 
 $body = @{
     message = "I want to buy an iPhone"
@@ -16,20 +16,20 @@ try {
         -ContentType "application/json" `
         -Body $body
     
-    Write-Host "✓ 成功！" -ForegroundColor Green
+    Write-Host "✓ Success!" -ForegroundColor Green
     Write-Host "Session ID: $($response.session_id)" -ForegroundColor Yellow
-    Write-Host "AI 回應: $($response.message)" -ForegroundColor White
+    Write-Host "AI Response: $($response.message)" -ForegroundColor White
     
-    # 儲存 session_id 供後續使用
+    # Save session_id for later use
     $sessionId = $response.session_id
     
 } catch {
-    Write-Host "✗ 失敗: $_" -ForegroundColor Red
+    Write-Host "✗ Failed: $_" -ForegroundColor Red
     exit 1
 }
 
-# 測試 2: 繼續對話
-Write-Host "`n[測試 2] 繼續對話（使用 session_id）..." -ForegroundColor Cyan
+# Test 2: Continue conversation
+Write-Host "`n[Test 2] Continue conversation (using session_id)..." -ForegroundColor Cyan
 
 $body2 = @{
     message = "Add the first one to my cart"
@@ -42,15 +42,15 @@ try {
         -ContentType "application/json" `
         -Body $body2
     
-    Write-Host "✓ 成功！" -ForegroundColor Green
-    Write-Host "AI 回應: $($response2.message)" -ForegroundColor White
+    Write-Host "✓ Success!" -ForegroundColor Green
+    Write-Host "AI Response: $($response2.message)" -ForegroundColor White
     
 } catch {
-    Write-Host "✗ 失敗: $_" -ForegroundColor Red
+    Write-Host "✗ Failed: $_" -ForegroundColor Red
 }
 
-# 測試 3: 查看購物車
-Write-Host "`n[測試 3] 查看購物車..." -ForegroundColor Cyan
+# Test 3: View shopping cart
+Write-Host "`n[Test 3] View shopping cart..." -ForegroundColor Cyan
 
 $body3 = @{
     message = "Show me my cart"
@@ -63,26 +63,26 @@ try {
         -ContentType "application/json" `
         -Body $body3
     
-    Write-Host "✓ 成功！" -ForegroundColor Green
-    Write-Host "AI 回應: $($response3.message)" -ForegroundColor White
+    Write-Host "✓ Success!" -ForegroundColor Green
+    Write-Host "AI Response: $($response3.message)" -ForegroundColor White
     
 } catch {
-    Write-Host "✗ 失敗: $_" -ForegroundColor Red
+    Write-Host "✗ Failed: $_" -ForegroundColor Red
 }
 
-# 測試 4: 查看對話歷史
-Write-Host "`n[測試 4] 查看對話歷史..." -ForegroundColor Cyan
+# Test 4: View conversation history
+Write-Host "`n[Test 4] View conversation history..." -ForegroundColor Cyan
 
 try {
     $history = Invoke-RestMethod -Uri "http://127.0.0.1:8000/chat/session/$sessionId/history" `
         -Method Get
     
-    Write-Host "✓ 成功！" -ForegroundColor Green
-    Write-Host "對話記錄數: $($history.messages.Count)" -ForegroundColor Yellow
+    Write-Host "✓ Success!" -ForegroundColor Green
+    Write-Host "Number of conversation records: $($history.messages.Count)" -ForegroundColor Yellow
     
 } catch {
-    Write-Host "✗ 失敗: $_" -ForegroundColor Red
+    Write-Host "✗ Failed: $_" -ForegroundColor Red
 }
 
-Write-Host "`n=== 測試完成 ===" -ForegroundColor Green
+Write-Host "`n=== Tests Completed ===" -ForegroundColor Green
 Write-Host "Session ID: $sessionId" -ForegroundColor Yellow

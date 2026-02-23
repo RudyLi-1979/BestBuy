@@ -12,7 +12,7 @@ import java.text.NumberFormat
 import java.util.Locale
 
 /**
- * 推薦商品 RecyclerView Adapter
+ * Recommended Products RecyclerView Adapter
  */
 class RecommendationAdapter(
     private val onItemClick: (RecommendationProduct) -> Unit
@@ -37,18 +37,18 @@ class RecommendationAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
         
         fun bind(product: RecommendationProduct) {
-            binding.tvProductName.text = product.names?.title ?: "未知產品"
+            binding.tvProductName.text = product.names?.title ?: "Unknown Product"
             
-            // 價格
+            // Price
             val priceFormat = NumberFormat.getCurrencyInstance(Locale.US)
             val price = product.prices?.current ?: product.prices?.regular
             if (price != null) {
                 binding.tvPrice.text = priceFormat.format(price)
             } else {
-                binding.tvPrice.text = "價格未提供"
+                binding.tvPrice.text = "Price not provided"
             }
             
-            // 圖片
+            // Image
             val imageUrl = product.images?.standard
             if (!imageUrl.isNullOrEmpty()) {
                 Glide.with(binding.root.context)
@@ -56,7 +56,7 @@ class RecommendationAdapter(
                     .into(binding.ivProductImage)
             }
             
-            // 點擊事件
+            // Click event
             binding.root.setOnClickListener {
                 onItemClick(product)
             }

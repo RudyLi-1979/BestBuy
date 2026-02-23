@@ -1,14 +1,14 @@
 package com.bestbuy.scanner.data.api
 
 /**
- * BestBuy API 測試範例
+ * BestBuy API Testing Examples
  * 
- * 這個檔案包含一些常見的產品 UPC 碼，可用於測試應用程式
+ * This file contains some common product UPC codes for testing the application
  */
 object BestBuyApiExamples {
     
     /**
-     * 測試用的 UPC 碼列表
+     * Test UPC Code List
      */
     val TEST_UPCS = mapOf(
         "Apple AirPods Pro" to "190199246850",
@@ -22,28 +22,28 @@ object BestBuyApiExamples {
     )
     
     /**
-     * API 使用範例
+     * API Usage Examples
      */
     object ApiExamples {
         
-        // 1. 透過 UPC 搜尋產品
+        // 1. Search for products by UPC
         const val SEARCH_BY_UPC = "GET https://api.bestbuy.com/v1/products(upc=190199246850)?apiKey=YOUR_KEY&format=json"
         
-        // 2. 透過 SKU 取得產品
+        // 2. Get product by SKU
         const val GET_BY_SKU = "GET https://api.bestbuy.com/v1/products/6443036.json?apiKey=YOUR_KEY"
         
-        // 3. 搜尋產品（關鍵字）
+        // 3. Search products (keyword)
         const val SEARCH_PRODUCTS = "GET https://api.bestbuy.com/v1/products(search=iphone)?apiKey=YOUR_KEY&format=json"
         
-        // 4. 取得推薦商品
+        // 4. Get recommended products
         const val GET_RECOMMENDATIONS = "GET https://api.bestbuy.com/v1/products/6443036/recommendations.json?apiKey=YOUR_KEY"
         
-        // 5. 取得 Also Viewed
+        // 5. Get Also Viewed
         const val GET_ALSO_VIEWED = "GET https://api.bestbuy.com/v1/products/6443036/alsoViewed.json?apiKey=YOUR_KEY"
     }
     
     /**
-     * 常見的查詢欄位
+     * Common Query Fields
      */
     object CommonFields {
         const val BASIC_FIELDS = "sku,name,regularPrice,salePrice,image"

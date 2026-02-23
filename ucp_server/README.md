@@ -1,285 +1,285 @@
 # UCP Server
 
-本地 UCP (Universal Commerce Protocol) Server，整合 Best Buy API，提供 AI 購物對話功能。
+Local UCP (Universal Commerce Protocol) Server, integrating Best Buy API to provide AI shopping conversation features.
 
-## 🐳 Docker 快速啟動（推薦）
+## 🐳 Docker Quick Start (Recommended)
 
-### 前置需求
+### Prerequisites
 
-- Docker Desktop（已安裝並運行）
+- Docker Desktop (Installed and running)
 - Best Buy API Key
 - Gemini API Key
 
-### 1. 配置環境變數
+### 1. Configure Environment Variables
 
 ```bash
-# 複製環境變數範本
+# Copy environment variable template
 copy .env.example .env
 
-# 編輯 .env 填入 API Keys
-# BESTBUY_API_KEY=你的API_KEY
-# GEMINI_API_KEY=你的Gemini_KEY
-# GEMINI_API_URL=你的Gemini_URL
+# Edit .env and fill in API Keys
+# BESTBUY_API_KEY=YOUR_API_KEY
+# GEMINI_API_KEY=YOUR_GEMINI_KEY
+# GEMINI_API_URL=YOUR_GEMINI_URL
 ```
 
-### 2. 啟動服務
+### 2. Start Services
 
 ```bash
-# 建立並啟動容器
+# Build and start containers
 docker-compose up -d
 
-# 查看運行狀態
+# Check running status
 docker-compose ps
 
-# 查看日誌
+# View logs
 docker-compose logs -f
 ```
 
-Server 將在 `http://localhost:58000` 啟動。
+Server will start at `http://localhost:58000`.
 
-### 3. 停止服務
+### 3. Stop Services
 
 ```bash
-# 停止容器
+# Stop container
 docker-compose stop
 
-# 停止並移除容器
+# Stop and remove container
 docker-compose down
 
-# 停止並移除容器及資料卷
+# Stop and remove container and data volume
 docker-compose down -v
 ```
 
-### 常用 Docker 命令
+### Common Docker Commands
 
 ```bash
-# 重建映像
+# Rebuild image
 docker-compose build --no-cache
 
-# 重啟服務
+# Restart service
 docker-compose restart
 
-# 進入容器
+# Enter container
 docker-compose exec ucp-server bash
 
-# 查看容器日誌
+# View container logs
 docker-compose logs -f ucp-server
 ```
 
 ---
 
-## 💻 本地開發模式（不使用 Docker）
+## 💻 Local Development Mode (Without Docker)
 
-### 1. 安裝依賴
+### 1. Install Dependencies
 
 ```bash
-# 建立虛擬環境
+# Create virtual environment
 python -m venv venv
 
-# 啟動虛擬環境（Windows）
+# Activate virtual environment (Windows)
 .\venv\Scripts\activate
 
-# 安裝依賴
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. 配置環境變數
+### 2. Configure Environment Variables
 
 ```bash
-# 複製環境變數範本
+# Copy environment variable template
 copy .env.example .env
 
-# 編輯 .env 填入 API Keys
+# Edit .env to fill in API Keys
 ```
 
-### 3. 生成 UCP 公私鑰
+### 3. Generate UCP Public/Private Keys
 
 ```bash
 python scripts/generate_keys.py
 ```
 
-### 4. 初始化資料庫
+### 4. Initialize Database
 
 ```bash
 alembic upgrade head
 ```
 
-### 5. 啟動 Server
+### 5. Start Server
 
 ```bash
-# 使用 PowerShell 腳本
+# Using PowerShell script
 .\start_server.ps1
 
-# 或直接使用 uvicorn
+# Or directly using uvicorn
 uvicorn app.main:app --reload --port 58000
 ```
 
-Server 將在 `http://localhost:58000` 啟動。
+Server will start at `http://localhost:58000`.
 
-## 📚 API 文件
+## 📚 API Documentation
 
-啟動 Server 後，訪問：
-- 首頁: `http://localhost:58000`
+After starting the server, visit:
+- Homepage: `http://localhost:58000`
 - Swagger UI: `http://localhost:58000/docs`
 - ReDoc: `http://localhost:58000/redoc`
 - UCP Profile: `http://localhost:58000/.well-known/ucp`
 
-## 📁 專案結構
+## 📁 Project Structure
 
 ```
 ucp_server/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                    # FastAPI 應用程式入口
-│   ├── config.py                  # 環境變數配置
-│   ├── models/                    # SQLAlchemy 資料模型
-│   ├── schemas/                   # Pydantic 資料驗證
-│   ├── services/                  # 業務邏輯層
-│   ├── api/                       # API 路由
-│   ├── database.py                # 資料庫連線
-│   └── dependencies.py            # 依賴注入
-├── tests/                         # 測試檔案
-├── alembic/                       # 資料庫遷移
-├── keys/                          # UCP 公私鑰
-├── scripts/                       # 工具腳本
-├── .env                           # 環境變數（不提交）
-├── .env.example                   # 環境變數範本
-├── Dockerfile                     # Docker 映像配置
-├── docker-compose.yml             # Docker Compose 配置
-├── .dockerignore                  # Docker 忽略文件
-├── requirements.txt               # Python 依賴
-└── README.md                      # 本檔案
+│   ├── main.py                    # FastAPI application entry point
+│   ├── config.py                  # Environment configuration
+│   ├── models/                    # SQLAlchemy data models
+│   ├── schemas/                   # Pydantic data validation
+│   ├── services/                  # Business logic layer
+│   ├── api/                       # API routes
+│   ├── database.py                # Database connection
+│   └── dependencies.py            # Dependency injection
+├── tests/                         # Test files
+├── alembic/                       # Database migrations
+├── keys/                          # UCP public/private keys
+├── scripts/                       # Utility scripts
+├── .env                           # Environment variables (do not commit)
+├── .env.example                   # Environment template
+├── Dockerfile                     # Docker image configuration
+├── docker-compose.yml             # Docker Compose configuration
+├── .dockerignore                  # Docker ignore file
+├── requirements.txt               # Python dependencies
+└── README.md                      # This file
 ```
 
-**使用 Docker:**
+**Using Docker:**
 ```bash
 docker-compose exec ucp-server pytest tests/ -v
 ```
 
-**本地環境:**
+**Local environment:**
 ```bash
 pytest tests/ -v
 ```
 
-### 資料庫遷移
+### Database Migrations
 
-**使用 Docker:**
+**Using Docker:**
 ```bash
-# 建立新的遷移
+# Create a new migration
 docker-compose exec ucp-server alembic revision --autogenerate -m "description"
 
-# 執行遷移
+# Apply migration
 docker-compose exec ucp-server alembic upgrade head
 
-# 回滾遷移
+# Rollback migration
 docker-compose exec ucp-server alembic downgrade -1
 ```
 
-**本地環境:**
+**Local environment:**
 ```bash
-# 建立新的遷移
+# Create a new migration
 alembic revision --autogenerate -m "description"
 
-# 執行遷移
+# Run migrations
 alembic upgrade head
 
-# 回滾遷移
+# Rollback migrations
 alembic downgrade -1
 ```
 
-## 🔧 故障排除
+## 🔧 Troubleshooting
 
-### Docker 相關問題
+### Docker-related Issues
 
-**問題：容器無法啟動**
+**Issue: Container failed to start**
 ```bash
-# 檢查容器狀態
+# Check container status
 docker-compose ps
 
-# 查看詳細日誌
+# View detailed logs
 docker-compose logs ucp-server
 
-# 重建容器
+# Rebuild container
 docker-compose down
 docker-compose build --no-cache
 docker-compose up -d
 ```
 
-**問題：端口 58000 已被佔用**
+**Issue: Port 58000 is already in use**
 ```bash
-# Windows PowerShell 查看佔用端口的進程
+# Check process using port in Windows PowerShell
 netstat -ano | findstr :58000
 
-# 停止佔用端口的進程（替換 PID）
+# Kill the process using port (replace PID)
 taskkill /PID <PID> /F
 
-# 或修改 docker-compose.yml 中的端口映射
+# Or modify port mapping in docker-compose.yml
 ports:
-  - "58001:58000"  # 使用不同的外部端口
+  - "58001:58000"  # Use a different external port
 ```
 
-**問題：.env 文件未正確載入**
+**Issue: .env file not loaded correctly**
 ```bash
-# 確認 .env 文件在 ucp_server 目錄下
-# 確認文件格式正確（無 BOM、UTF-8 編碼）
-# 重啟容器
+# Confirm .env file is in ucp_server directory
+# Confirm file format is correct (no BOM, UTF-8 encoding)
+# Restart container
 docker-compose restart
 ```
 
-### API 連接問題
+### API Connection Issues
 
-**問題：Android App 無法連接到 Server**
-- 確認 Docker 容器正在運行：`docker-compose ps`
-- 確認端口映射正確：`http://localhost:58000`
-- 如使用 Cloudflare Tunnel，確認隧道正在運行
+**Issue: Android App cannot connect to Server**
+- Confirm Docker container is running: `docker-compose ps`
+- Confirm port mapping is correct: `http://localhost:58000`
+- If using Cloudflare Tunnel, confirm tunnel is running
 
-## 🌐 Cloudflare Tunnel 配置（可選）
+## 🌐 Cloudflare Tunnel Configuration (Optional)
 
-如需從外部網路訪問（例如實體 Android 裝置），可使用 Cloudflare Tunnel：
+If you need to access from external networks (e.g., physical Android device), you can use Cloudflare Tunnel:
 
 ```bash
-# 在另一個終端運行
+# Run in another terminal
 cloudflared tunnel --url http://localhost:58000
 ```
 
-這將提供一個公開的 HTTPS URL，可從任何地方訪問。
+This will provide a public HTTPS URL that can be accessed from anywhere.
 
-## 📊 監控與日誌
+## 📊 Monitoring and Logging
 
-### 查看即時日誌
+### View real-time logs
 ```bash
-# 所有服務
+# All services
 docker-compose logs -f
 
-# 特定服務
+# Specific service
 docker-compose logs -f ucp-server
 
-# 最近 100 行
+# Last 100 lines
 docker-compose logs --tail=100 ucp-server
 ```
 
-### 容器資源使用
+### Container Resource Usage
 ```bash
-# 查看資源使用情況
+# View resource usage
 docker stats bestbuy-ucp-server
 
 ```bash
 pytest tests/ -v
 ```
 
-### 資料庫遷移
+### Database Migrations
 
 ```bash
-# 建立新的遷移
+# Create a new migration
 alembic revision --autogenerate -m "description"
 
-# 執行遷移
+# Apply migration
 alembic upgrade head
 
-# 回滾遷移
+# Rollback migration
 alembic downgrade -1
 ```
 
-## 授權
+## License
 
-本專案僅供學習和參考使用。
+This project is for learning and reference purposes only.

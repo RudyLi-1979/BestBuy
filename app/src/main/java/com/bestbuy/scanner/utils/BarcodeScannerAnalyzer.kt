@@ -8,7 +8,7 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 
 /**
- * 條碼掃描分析器
+ * Barcode Scanner Analyzer
  */
 class BarcodeScannerAnalyzer(
     private val onBarcodeDetected: (String) -> Unit
@@ -16,7 +16,7 @@ class BarcodeScannerAnalyzer(
     
     private val scanner = BarcodeScanning.getClient()
     private var lastScannedTime = 0L
-    private val SCAN_COOLDOWN = 2000L // 2 秒冷卻時間，避免重複掃描
+    private val SCAN_COOLDOWN = 2000L // 2 second cooldown to prevent duplicate scans
     
     @SuppressLint("UnsafeOptInUsageError")
     override fun analyze(imageProxy: ImageProxy) {
@@ -32,7 +32,7 @@ class BarcodeScannerAnalyzer(
                     for (barcode in barcodes) {
                         when (barcode.valueType) {
                             Barcode.TYPE_PRODUCT -> {
-                                // 產品條碼 (UPC, EAN)
+                                // Product barcode (UPC, EAN)
                                 val rawValue = barcode.rawValue
                                 if (rawValue != null && System.currentTimeMillis() - lastScannedTime > SCAN_COOLDOWN) {
                                     lastScannedTime = System.currentTimeMillis()
@@ -40,7 +40,7 @@ class BarcodeScannerAnalyzer(
                                 }
                             }
                             Barcode.TYPE_ISBN -> {
-                                // ISBN 條碼
+                                // ISBN barcode
                                 val rawValue = barcode.rawValue
                                 if (rawValue != null && System.currentTimeMillis() - lastScannedTime > SCAN_COOLDOWN) {
                                     lastScannedTime = System.currentTimeMillis()
@@ -48,7 +48,7 @@ class BarcodeScannerAnalyzer(
                                 }
                             }
                             else -> {
-                                // 其他類型的條碼也嘗試處理
+                                // Other types of barcodes are also handled
                                 val rawValue = barcode.rawValue
                                 if (rawValue != null && System.currentTimeMillis() - lastScannedTime > SCAN_COOLDOWN) {
                                     lastScannedTime = System.currentTimeMillis()
@@ -59,7 +59,7 @@ class BarcodeScannerAnalyzer(
                     }
                 }
                 .addOnFailureListener {
-                    // 處理錯誤
+                    // Handle errors
                 }
                 .addOnCompleteListener {
                     imageProxy.close()

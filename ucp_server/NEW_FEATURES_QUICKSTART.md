@@ -181,19 +181,19 @@ Server runs on: `http://localhost:8000`
 
 **Store Availability**:
 - "Where can I buy iPhone 15 Pro near 94103?"
-- "哪裡可以買到 MacBook Air? 我在紐約 10001"
+- "Where can I buy a MacBook Air? I'm in New York 10001"
 - "Check stores with iPad near me"
 
 **Also Bought**:
 - "What do people buy with AirPods Pro?"
-- "其他人買 iPhone 15 Pro 還會買什麼?"
+- "What else do people buy with an iPhone 15 Pro?"
 - "Show me items bought together with MacBook"
 
 **Advanced Search**:
 - "Show me Apple laptops under $2000"
-- "我想找 1500 到 2500 美元的 gaming laptop"
+- "I'm looking for a gaming laptop between $1500 and $2500"
 - "Samsung phones with free shipping"
-- "找有特價的 Sony 耳機"
+- "Find Sony headphones that are on sale"
 
 ---
 

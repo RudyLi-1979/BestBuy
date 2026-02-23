@@ -3,20 +3,20 @@ package com.bestbuy.scanner.utils
 import android.util.Log
 
 /**
- * API 調試工具
+ * API Debugging Tool
  */
 object ApiDebugHelper {
     
     private const val TAG = "BestBuyAPI"
     
     /**
-     * 記錄 API 請求
+     * Log API Request
      */
     fun logRequest(endpoint: String, params: Map<String, String>) {
         Log.d(TAG, "=== API Request ===")
         Log.d(TAG, "Endpoint: $endpoint")
         params.forEach { (key, value) ->
-            // 不記錄完整的 API Key，只顯示前後幾個字符
+            // Do not log complete API Key, only show first and last few characters
             val displayValue = if (key == "apiKey" && value.length > 8) {
                 "${value.take(4)}...${value.takeLast(4)}"
             } else {
@@ -27,7 +27,7 @@ object ApiDebugHelper {
     }
     
     /**
-     * 記錄 API 回應
+     * Log API Response
      */
     fun logResponse(code: Int, message: String, body: String?) {
         Log.d(TAG, "=== API Response ===")
@@ -39,7 +39,7 @@ object ApiDebugHelper {
     }
     
     /**
-     * 記錄錯誤
+     * Log Error
      */
     fun logError(error: String, exception: Exception? = null) {
         Log.e(TAG, "=== API Error ===")

@@ -1,49 +1,52 @@
 # On-Demand Loading Optimization
 
 ## Overview
-為了解決持續遇到的 API 配額耗盡問題 (403 Over Quota),實現了 **按需載入 (On-Demand Loading)** 策略,將預設 API 呼叫次數從每次搜尋的 5-6 次降低至 1-2 次 (減少 60-80%)。
+To solve the recurring API quota exhaustion issue (403 Over Quota), an **On-Demand Loading** strategy was implemented, reducing the default number of API calls from 5-6 per search to 1-2 (a 60-80% reduction).
 
 ## Problem Statement
 
-### 舊有行為
-- 每次產品搜尋 = 1 次 API 呼叫
-- 自動檢查 3 間門市庫存 = 4 次 API 呼叫 (1 次產品資訊 + 1 次門市搜尋 + 3 次庫存查詢)
-- **總計**: 5-6 次 API 呼叫/每次搜尋
+### Previous Behavior
+- Each product search = 1 API call
+- Automatic check of 3 store inventories = 4 API calls (1 for product info + 1 for store search + 3 for inventory checks)
+- **Total**: 5-6 API calls per search
 
-### API 限制
+### API Limits
 - Rate Limit: 5 requests/second
 - Daily Quota: 50,000 requests/day
-- 問題: 簡單搜尋就耗盡配額
+- Problem: Simple searches were exhausting the quota
 
 ## Solution: Two-Stage Loading Pattern
 
-### Stage 1: 初始搜尋 (Minimal API Usage)
-- 預設顯示 **2 個產品**
-- API 呼叫: **1 次**
-- 使用者可以先瀏覽產品選項
+### Stage 1: Initial Search (Minimal API Usage)
+- Display **2 products** by default
+- API calls: **1**
+- Allows the user to first browse product options
 
-### Stage 2: 詳細資訊 (On-Demand)
-只有當使用者**明確要求**時才獲取:
-- 門市庫存查詢
-- 更多產品選項
-- 相關推薦
+### Stage 2: Detailed Information (On-Demand)
+Fetch only when the user **explicitly asks** for:
+- Store inventory query
+- More product options
+- Related recommendations
+- Store inventory
+- More product options
+- Related recommendations
 
 ## Implementation Details
 
-### 1. 降低預設搜尋結果數量
+### 1. Reduce Default Search Result Count
 
 #### bestbuy_client.py
 ```python
-# search_products 方法
-async def search_products(self, query: str, page_size: int = 2):  # 從 10 降至 2
+# search_products method
+async def search_products(self, query: str, page_size: int = 2):  # Lowered from 10 to 2
     """Search for products by query string.
     
     Args:
         query: Search query
         page_size: Number of results per page (default: 2 to conserve API quota)
     """
-    # 請求大小也從 page_size * 3 降至 page_size * 2
-    request_size = max(min(page_size * 2, 20), 1)  # 從 100 降至 20
+    # Request size also lowered from page_size * 3 to page_size * 2
+    request_size = max(min(page_size * 2, 20), 1)  # Lowered from 100 to 20
 ```
 
 #### gemini_client.py - Function Declaration
@@ -79,15 +82,15 @@ async def search_products(self, query: str, page_size: int = 2):  # 從 10 降�
 
 #### chat_service.py
 ```python
-# execute_function 方法
+# execute_function method
 elif function_name == "search_products":
     query = arguments.get("query")
-    max_results = arguments.get("max_results", 2)  # 從 5 降至 2 以節省 API 配額
+    max_results = arguments.get("max_results", 2)  # Reduced from 5 to 2 to conserve API quota
     
     logger.info(f"Searching products: {query} (max_results={max_results})")
 ```
 
-### 2. 門市庫存查詢設為 On-Demand Only
+### 2. Store Availability Set to On-Demand Only
 
 #### gemini_client.py - Function Declaration
 ```python
@@ -129,7 +132,7 @@ elif function_name == "search_products":
 
 ### 3. Gemini AI System Instructions
 
-#### SHOPPING_ASSISTANT_INSTRUCTION 新增區塊
+#### SHOPPING_ASSISTANT_INSTRUCTION New Block
 ```
 **API QUOTA OPTIMIZATION (CRITICAL)**:
 - By DEFAULT, show only 2 product results to conserve API resources
@@ -147,7 +150,7 @@ elif function_name == "search_products":
   2. Then: If user asks about stores/pickup → check availability
 ```
 
-### 4. 進階搜尋優化
+### 4. Advanced Search Optimization
 
 #### chat_service.py
 ```python
@@ -163,7 +166,7 @@ elif function_name == "advanced_product_search":
         on_sale=on_sale,
         free_shipping=free_shipping,
         in_store_pickup=in_store_pickup,
-        page_size=5  # 從 10 降至 5 以節省 API 配額
+        page_size=5  # Reduced from 10 to 5 to conserve API quota
     )
 ```
 
@@ -177,10 +180,10 @@ elif function_name == "advanced_product_search":
    - `request_size` max limit: 100 → 20
 
 2. **gemini_client.py** (c:\Users\rudy\AndroidStudioProjects\BestBuy\ucp_server\app\services\gemini_client.py)
-   - `search_products` function description: 新增 "BY DEFAULT, return only 2 results"
-   - `search_products` max_results parameter: 新增 "DEFAULT: 2 to conserve API quota"
-   - `check_store_availability` description: 新增 "IMPORTANT: Only call when user EXPLICITLY asks" + 詳細觸發條件
-   - `SHOPPING_ASSISTANT_INSTRUCTION`: 新增 "API QUOTA OPTIMIZATION (CRITICAL)" 完整區塊
+   - `search_products` function description: Added "BY DEFAULT, return only 2 results"
+   - `search_products` max_results parameter: Added "DEFAULT: 2 to conserve API quota"
+   - `check_store_availability` description: Added "IMPORTANT: Only call when user EXPLICITLY asks" + Detailed trigger conditions
+   - `SHOPPING_ASSISTANT_INSTRUCTION`: Added "API QUOTA OPTIMIZATION (CRITICAL)" complete block
 
 3. **chat_service.py** (c:\Users\rudy\AndroidStudioProjects\BestBuy\ucp_server\app\services\chat_service.py)
    - `search_products` handler default `max_results`: 5 → 2 (with comment)
@@ -190,8 +193,8 @@ elif function_name == "advanced_product_search":
 
 ### API Call Reduction
 
-#### 典型使用場景 1: 簡單產品搜尋
-**使用者**: "show me MacBook Pro"
+#### Typical Use Case 1: Simple Product Search
+**User**: "show me MacBook Pro"
 
 **Before**:
 - Product search: 1 call
@@ -203,8 +206,8 @@ elif function_name == "advanced_product_search":
 - **Total**: 1 call
 - **Savings**: 80% ✅
 
-#### 典型使用場景 2: 搜尋 + 詢問門市
-**使用者**: "show me MacBook Pro" → "Where can I buy it near 94103?"
+#### Typical Use Case 2: Search + Ask About Stores
+**User**: "show me MacBook Pro" → "Where can I buy it near 94103?"
 
 **Before**:
 - Product search: 1 call
@@ -218,7 +221,7 @@ elif function_name == "advanced_product_search":
 - **Total**: 5 calls
 - **Savings**: 0% (same, but only when user explicitly asks)
 
-#### 典型使用場景 3: 進階搜尋
+#### Typical Use Case 3: Advanced Search
 **Before**: 10 products → 1 call
 
 **After**: 5 products → 1 call
@@ -243,47 +246,47 @@ elif function_name == "advanced_product_search":
 ### User Experience Impact
 
 #### Positive
-1. **更快回應時間**: 1 次 API 呼叫 vs 5 次呼叫
-2. **更清晰的選擇**: 2 個產品更容易比較決策
-3. **按需載入**: 使用者控制何時獲取更多資訊
+1. **Faster Response Time**: 1 API call vs 5 calls
+2. **Clearer Choices**: 2 products easier to compare and decide
+3. **On-Demand Loading**: User controls when to get more information
 
 #### Neutral
-1. **預設少結果**: 可能需要額外詢問 "show me more"
-2. **兩階段互動**: 門市資訊需要明確詢問
+1. **Fewer Default Results**: May need additional "show me more" question
+2. **Two-Stage Interaction**: Store information requires explicit request
 
 ## Testing Plan
 
 ### Test Cases
 
-#### TC1: 預設搜尋只返回 2 個產品
+#### TC1: Default Search Returns 2 Products Only
 ```
 User: "Show me MacBook Pro"
 Expected: 2 products, no store data
 Verify: Check logs for 1 API call only
 ```
 
-#### TC2: 使用者要求更多選項
+#### TC2: User Requests More Options
 ```
 User: "Show me MacBook Pro" → "Give me 5 options"
 Expected: 5 products
 Verify: max_results parameter = 5
 ```
 
-#### TC3: 門市查詢觸發條件
+#### TC3: Store Query Trigger Conditions
 ```
 User: "Where can I buy the MacBook Pro near 94103?"
 Expected: Store availability data with 3 stores
 Verify: check_store_availability called with postal_code=94103
 ```
 
-#### TC4: 門市查詢不自動觸發
+#### TC4: Store Query Does Not Auto-trigger
 ```
 User: "Show me MacBook Pro"
 Expected: 2 products WITHOUT store data
 Verify: check_store_availability NOT called
 ```
 
-#### TC5: 進階搜尋返回 5 個產品
+#### TC5: Advanced Search Returns 5 Products
 ```
 User: "Apple laptops under $2000"
 Expected: 5 products with filters applied
@@ -366,7 +369,7 @@ Select-String -Path "ucp_server/logs/*.log" -Pattern "max_results=2"
 
 ## Rollback Plan
 
-如果優化後出現使用者體驗問題,可以回滾至舊版本:
+If user experience issues arise after optimization, you can roll back to the old version:
 
 ### Revert Changes
 ```powershell
@@ -385,38 +388,38 @@ git revert <commit_hash>
 ## Future Enhancements
 
 ### 1. Adaptive Loading
-根據使用者行為動態調整:
-- 如果使用者經常要求更多選項 → 預設提高至 3-5 個產品
-- 如果使用者經常查詢門市 → 主動建議檢查庫存
+Dynamically adjust based on user behavior:
+- If user frequently requests more options → increase default to 3-5 products
+- If user frequently queries stores → proactively suggest checking inventory
 
 ### 2. Smart Caching
-- Cache 熱門產品搜尋結果 (24 hours)
-- Cache 門市資訊 (1 hour)
-- 減少重複 API 呼叫
+- Cache popular product search results (24 hours)
+- Cache store information (1 hour)
+- Reduce redundant API calls
 
 ### 3. Batch Store Queries
-- 使用者選定多個產品後,一次查詢所有產品的門市庫存
-- 從 N×4 calls → 4 calls per batch
+- After user selects multiple products, query store inventory for all products at once
+- From N×4 calls → 4 calls per batch
 
 ### 4. User Preference Learning
-- 追蹤使用者偏好 (是否常查門市、偏好多少產品選項)
-- 個人化預設值
+- Track user preferences (frequently checking stores, preferred number of product options)
+- Personalized defaults
 
 ## Conclusion
 
-本次優化成功將 API 呼叫次數減少 **60-80%**,從每次搜尋的 5-6 次降至 1-2 次,並提升系統容量 **5 倍** (從 2,000-3,300 使用者增至 10,000-16,000 使用者/天)。
+This optimization successfully reduced API call count by **60-80%**, from 5-6 calls per search to 1-2 calls, and increased system capacity **5 times** (from 2,000-3,300 users to 10,000-16,000 users/day).
 
-核心策略是 **按需載入** (On-Demand Loading):
-1. ✅ 預設顯示 2 個產品 (最小 API 使用)
-2. ✅ 只有明確要求時才獲取門市資訊 (避免浪費 API 配額)
-3. ✅ 使用者控制資訊載入節奏 (更好的使用者體驗)
+The core strategy is **On-Demand Loading**:
+1. ✅ Display 2 products by default (minimal API usage)
+2. ✅ Fetch store information only when explicitly requested (avoid wasting API quota)
+3. ✅ User controls information loading pace (better user experience)
 
-這個架構確保應用程式在正常使用下能夠維持在 API 配額限制內,同時保持靈活性讓使用者能夠在需要時獲取詳細資訊。
+This architecture ensures the application stays within API quota limits during normal usage, while maintaining flexibility for users to access detailed information when needed.
 
 ## Related Documentation
 
-- [NEW_FEATURES_IMPLEMENTATION.md](NEW_FEATURES_IMPLEMENTATION.md) - 新功能實現細節
-- [API_QUOTA_OPTIMIZATION.md](API_QUOTA_OPTIMIZATION.md) - API 配額優化指南
-- [CHAT_INTEGRATION_FIXES.md](CHAT_INTEGRATION_FIXES.md) - 聊天整合修復
-- [NEW_FEATURES_QUICKSTART.md](NEW_FEATURES_QUICKSTART.md) - 快速開始指南
-- [TEST_RESULTS_ANALYSIS.md](TEST_RESULTS_ANALYSIS.md) - 測試結果分析
+- [NEW_FEATURES_IMPLEMENTATION.md](NEW_FEATURES_IMPLEMENTATION.md) - Implementation Details of New Features
+- [API_QUOTA_OPTIMIZATION.md](API_QUOTA_OPTIMIZATION.md) - API Quota Optimization Guide
+- [CHAT_INTEGRATION_FIXES.md](CHAT_INTEGRATION_FIXES.md) - Chat Integration Fixes
+- [NEW_FEATURES_QUICKSTART.md](NEW_FEATURES_QUICKSTART.md) - Quick Start Guide
+- [TEST_RESULTS_ANALYSIS.md](TEST_RESULTS_ANALYSIS.md) - Test Results Analysis

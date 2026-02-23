@@ -1,82 +1,82 @@
-# UCP Server 快速啟動指南
+# UCP Server Quick Start Guide
 
-本指南將幫助您快速啟動 UCP Server 的基礎架構。
+This guide will help you quickly start the basic infrastructure of the UCP Server.
 
-## 步驟 1：建立虛擬環境並安裝依賴
+## Step 1: Create a Virtual Environment and Install Dependencies
 
 ```powershell
-# 進入 ucp_server 目錄
+# Enter the ucp_server directory
 cd ucp_server
 
-# 建立虛擬環境
+# Create a virtual environment
 python -m venv venv
 
-# 啟動虛擬環境
+# Activate the virtual environment
 .\venv\Scripts\activate
 
-# 安裝依賴
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-## 步驟 2：配置環境變數
+## Step 2: Configure Environment Variables
 
 ```powershell
-# 複製環境變數範本
+# Copy environment variables template
 copy .env.example .env
 
-# 編輯 .env 檔案，填入您的 API Keys
-# 至少需要填入：
+# Edit .env file and fill in your API Keys
+# At minimum, you need to fill in:
 # - BESTBUY_API_KEY
 # - GEMINI_API_KEY
 ```
 
-## 步驟 3：生成 UCP 金鑰對
+## Step 3: Generate UCP Key Pair
 
 ```powershell
 python scripts/generate_keys.py
 ```
 
-## 步驟 4：初始化資料庫
+## Step 4: Initialize Database
 
 ```powershell
-# 資料庫會在首次啟動時自動建立
-# 如果需要手動初始化，可以執行：
+# Database will be automatically created on first startup
+# If you need to manually initialize, you can run:
 python -c "from app.database import init_db; init_db()"
 ```
 
-## 步驟 5：啟動 Server
+## Step 5: Start Server
 
 ```powershell
-# 開發模式（自動重載）
+# Development mode (auto-reload)
 uvicorn app.main:app --reload --port 8000
 
-# 或使用 Python 直接執行
+# Or run directly with Python
 python -m app.main
 ```
 
-## 步驟 6：驗證安裝
+## Step 6: Verify Installation
 
-開啟瀏覽器訪問：
+Open a browser and visit:
 
-- **API 文件**: http://localhost:8000/docs
+- **API Documentation**: http://localhost:8000/docs
 - **UCP Profile**: http://localhost:8000/.well-known/ucp
 - **Health Check**: http://localhost:8000/health
 
-## 下一步
+## Next Steps
 
-目前已完成的模組：
-- ✅ 專案結構
-- ✅ 資料模型（Cart, Order, CheckoutSession）
+Completed modules:
+- ✅ Project Structure
+- ✅ Data Models (Cart, Order, CheckoutSession)
 - ✅ Best Buy API Client
-- ✅ 業務邏輯服務（Cart, Checkout, Order）
-- ✅ UCP Profile 端點
+- ✅ Business Logic Services (Cart, Checkout, Order)
+- ✅ UCP Profile Endpoint
 
-待實作的模組：
-- [ ] Cart API 端點
-- [ ] Products API 端點
-- [ ] Checkout API 端點
-- [ ] Orders API 端點
-- [ ] Gemini LLM 整合
+Modules to be implemented:
+- [ ] Cart API Endpoints
+- [ ] Products API Endpoints
+- [ ] Checkout API Endpoints
+- [ ] Orders API Endpoints
+- [ ] Gemini LLM Integration
 - [ ] Android App Chat Mode
 
-請參考 `UCP_Implementation_Plan.md` 了解完整實作計畫。
+Please refer to `UCP_Implementation_Plan.md` for complete implementation plan.

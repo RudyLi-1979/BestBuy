@@ -1,21 +1,21 @@
-# 專案架構說明
+# Project Architecture Description
 
-## 整體架構
+## Overall Architecture
 
-本專案採用 **Chat-First 架構**，包含 Android App 和 UCP Server 兩個部分：
+This project adopts a **Chat-First Architecture**, consisting of two main parts: the Android App and the UCP Server:
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │                   Android App                        │
 │                 (Kotlin + MVVM)                     │
 │                                                      │
-│  ChatActivity (主畫面) ──┐                          │
+│  ChatActivity (Main screen) ──┐                     │
 │      ↓                    │                          │
 │  ChatViewModel            │                          │
 │      ↓                    │                          │
 │  ChatRepository ──────────┼──→ UCP Server           │
 │                           │                          │
-│  MainActivity (掃描) ─────┘                          │
+│  MainActivity (Scanning) ─────┘                      │
 │  ProductDetailActivity                              │
 │  CartActivity                                       │
 └──────────────────┬──────────────────────────────────┘
@@ -39,17 +39,17 @@
 └─────────────────────────────────────────────────────┘
 ```
 
-## Android App MVVM 架構
+## Android App MVVM Architecture
 
-本專案採用 MVVM (Model-View-ViewModel) 架構模式：
+This project follows the MVVM (Model-View-ViewModel) architecture pattern:
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │                      View Layer                      │
 │  (Activity, Fragment, XML Layouts)                  │
 │                                                      │
-│  - ChatActivity.kt (主畫面)                         │
-│  - MainActivity.kt (掃描)                           │
+│  - ChatActivity.kt (Main screen)                    │
+│  - MainActivity.kt (Scanning)                       │
 │  - ProductDetailActivity.kt                         │
 │  - CartActivity.kt                                  │                         │
 │  - activity_main.xml                                │
@@ -91,9 +91,9 @@
 └─────────────────────────────────────────────────────┘
 ```
 
-## 資料流程
+## Data Flow
 
-### 1. Chat Mode 對話流程 (新)
+### 1. Chat Mode Conversation Flow (New)
 
 ```
 User types message in ChatActivity
@@ -126,9 +126,9 @@ LiveData updates
 ChatActivity displays message + product cards
 ```
 
-### 2. 條碼掃描流程
+### 2. Barcode Scanning Flow
 
-### 2. 條碼掃描流程
+### 2. Barcode Scanning Flow
 
 ```
 User clicks "📷 Scan" in ChatActivity
@@ -154,7 +154,7 @@ Navigate to ProductDetailActivity
 User exits → Return to ChatActivity
 ```
 
-### 3. 產品詳情載入流程
+### 3. Product Detail Loading Flow
 
 ```
 ProductDetailActivity.onCreate()
@@ -175,82 +175,82 @@ Update LiveData
 Activity observes and displays data
 ```
 
-## 關鍵元件說明
+## Key Component Descriptions
 
 ### View Layer (UI)
 
-- **MainActivity**: 主畫面，包含相機預覽和條碼掃描
-- **ProductDetailActivity**: 產品詳情頁，顯示完整產品資訊
-- **RecommendationAdapter**: RecyclerView Adapter，顯示推薦商品
+- **MainActivity**: Main screen, contains camera preview and barcode scanning
+- **ProductDetailActivity**: Product detail page, displays complete product information
+- **RecommendationAdapter**: RecyclerView Adapter, displays recommended products
 
 ### ViewModel Layer
 
 - **ProductViewModel**: 
-  - 管理 UI 狀態（loading, error）
-  - 處理產品搜尋和推薦商品載入
-  - 使用 LiveData 通知 UI 更新
+  - Manage UI states (loading, error)
+  - Handle product search and recommended products loading
+  - Use LiveData to notify UI updates
 
 ### Repository Layer
 
 - **ProductRepository**: 
-  - 封裝資料來源（API）
-  - 提供統一的資料存取介面
-  - 處理 API 錯誤和例外
+  - Encapsulate data sources (API)
+  - Provide unified data access interface
+  - Handle API errors and exceptions
 
 ### Data Layer
 
-- **BestBuyApiService**: Retrofit API 介面定義
-- **RetrofitClient**: Retrofit 實例配置
-- **Product**: 資料模型類別
+- **BestBuyApiService**: Retrofit API interface definition
+- **RetrofitClient**: Retrofit instance configuration
+- **Product**: Data model class
 
 ### Utils
 
-- **BarcodeScannerAnalyzer**: CameraX 圖像分析器，用於條碼掃描
-- **NetworkUtils**: 網路狀態檢查工具
-- **FormatUtils**: 資料格式化工具
+- **BarcodeScannerAnalyzer**: CameraX image analyzer for barcode scanning
+- **NetworkUtils**: Network status checking utility
+- **FormatUtils**: Data formatting utility
 
-## 依賴注入
+## Dependency Injection
 
-目前使用手動依賴注入（Manual DI）：
+Currently using manual dependency injection (Manual DI):
 
 ```kotlin
-// ViewModel 建立 Repository
+// ViewModel creates Repository
 private val repository = ProductRepository()
 
-// Repository 使用 RetrofitClient
+// Repository uses RetrofitClient
 private val apiService = RetrofitClient.apiService
 
-// Activity 建立 ViewModel
+// Activity creates ViewModel
 viewModel = ViewModelProvider(this)[ProductViewModel::class.java]
 ```
 
-### 未來可升級為：
+### Future upgrade options:
 
-- **Hilt**: Google 推薦的 DI 框架
-- **Koin**: 輕量級 Kotlin DI 框架
+- **Hilt**: Google recommended DI framework
+- **Koin**: Lightweight Kotlin DI framework
 
-## 非同步處理
+## Asynchronous Processing
 
-使用 Kotlin Coroutines：
+Using Kotlin Coroutines:
 
 ```kotlin
-// Repository 中的 suspend function
+// suspend function in Repository
 suspend fun searchProductByUPC(upc: String): Result<Product?> {
     return withContext(Dispatchers.IO) {
         // API call
     }
 }
 
-// ViewModel 中使用 viewModelScope
+// Using viewModelScope in ViewModel
 viewModelScope.launch {
     val result = repository.searchProductByUPC(upc)
     // Update LiveData
 }
 ```
 
-## 狀態管理
+## State Management
 
-使用 LiveData 進行狀態管理：
+Using LiveData for state management:
 
 ```kotlin
 // ViewModel
@@ -273,9 +273,9 @@ viewModel.loading.observe(this) { isLoading ->
 }
 ```
 
-## 網路層架構
+## Network Layer Architecture
 
-### Retrofit 配置
+### Retrofit Configuration
 
 ```kotlin
 Retrofit.Builder()
@@ -285,18 +285,18 @@ Retrofit.Builder()
     .build()
 ```
 
-### OkHttp 攔截器
+### OkHttp Interceptors
 
-- **HttpLoggingInterceptor**: 記錄 API 請求和回應
-- 設定連線超時時間（30 秒）
+- **HttpLoggingInterceptor**: Logs API requests and responses
+- Set connection timeout (30 seconds)
 
-### API 服務
+### API Service
 
-所有 API 呼叫都是 suspend functions，支援 Coroutines。
+All API calls are suspend functions that support Coroutines.
 
-## 圖片載入
+## Image Loading
 
-使用 Glide 載入產品圖片：
+Using Glide to load product images:
 
 ```kotlin
 Glide.with(context)
@@ -304,27 +304,27 @@ Glide.with(context)
     .into(imageView)
 ```
 
-## 優點
+## Advantages
 
-1. **關注點分離**: View、ViewModel、Repository 各司其職
-2. **可測試性**: 各層可獨立測試
-3. **維護性**: 程式碼結構清晰，易於維護和擴展
-4. **生命週期感知**: ViewModel 和 LiveData 自動處理生命週期
+1. **Separation of Concerns**: View, ViewModel, Repository each have their own responsibilities
+2. **Testability**: Each layer can be tested independently
+3. **Maintainability**: Code structure is clear and easy to maintain and extend
+4. **Lifecycle Awareness**: ViewModel and LiveData automatically handle lifecycle
 
-## 後續改進建議
+## Future Improvement Suggestions
 
-1. ~~**引入 Hilt/Koin**: 改善依賴注入~~ (使用 Manual DI)
-2. ✅ **使用 Room**: Room Database v2 已實作（購物車、用戶互動）
-3. **StateFlow/SharedFlow**: 替代 LiveData
-4. **Jetpack Compose**: 使用現代 UI 框架
-5. **Clean Architecture**: 進一步分層（Domain Layer）
-6. **單元測試**: 加入完整的測試覆蓋
+1. ~~**Introduce Hilt/Koin**: Improve dependency injection~~ (Using Manual DI)
+2. ✅ **Use Room**: Room Database v2 implemented (shopping cart, user interactions)
+3. **StateFlow/SharedFlow**: Replace LiveData
+4. **Jetpack Compose**: Use modern UI framework
+5. **Clean Architecture**: Further layering (Domain Layer)
+6. **Unit Tests**: Add comprehensive test coverage
 
 ---
 
-## UCP Server 架構 (Python FastAPI)
+## UCP Server Architecture (Python FastAPI)
 
-### 整體架構
+### Overall Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -354,32 +354,32 @@ Glide.with(context)
 └────────────────┘    └──────────────────────────┘
 ```
 
-### 關鍵組件
+### Key Components
 
 #### 1. Chat Service
-- **位置**: `app/services/chat_service.py`
-- **職責**: 
-  - 處理用戶訊息
-  - 調用 Gemini AI
-  - 執行函數調用
-  - 返回結果給用戶
+- **Location**: `app/services/chat_service.py`
+- **Responsibility**: 
+  - Process user messages
+  - Invoke Gemini AI
+  - Execute function calls
+  - Return results to user
 
 #### 2. Gemini Client
-- **位置**: `app/services/gemini_client.py`
-- **功能**:
-  - 與 Gemini 2.5 Flash API 通訊
-  - 處理 Function Calling
-  - 管理對話歷史
+- **Location**: `app/services/gemini_client.py`
+- **Features**:
+  - Communicate with Gemini 2.5 Flash API
+  - Handle Function Calling
+  - Manage conversation history
 
 #### 3. Best Buy API Client
-- **位置**: `app/services/bestbuy_client.py`
-- **功能**:
-  - 商品搜尋（UPC、關鍵字、進階）
-  - 門市庫存查詢
-  - 推薦商品（Also Viewed, Also Bought）
-  - 智能搜尋優化（規格篩選、關聯性評分）
+- **Location**: `app/services/bestbuy_client.py`
+- **Features**:
+  - Product search (UPC, keywords, advanced)
+  - Store inventory query
+  - Product recommendations (Also Viewed, Also Bought)
+  - Intelligent search optimization (specification filtering, relevance scoring)
 
-### 資料流程
+### Data Flow
 
 ```
 Android App
@@ -387,7 +387,7 @@ Android App
 ChatService.process_message()
     ↓
 GeminiClient.generate_content()
-    ↓ (如需函數調用)
+    ↓ (if function call needed)
 ChatService.execute_function()
     ↓
 BestBuyAPIClient.[function_name]()
@@ -401,7 +401,7 @@ ChatResponse (message + products + function_calls)
 Android App displays results
 ```
 
-### 部署架構
+### Deployment Architecture
 
 ```
 Local Machine (localhost:8000)
@@ -413,14 +413,14 @@ Public URL (https://ucp.rudy.xx.kg)
 Android App (anywhere in the world)
 ```
 
-**優點**:
-- ✅ HTTPS 加密
-- ✅ 全球可訪問
-- ✅ 無需端口轉發或 VPN
-- ✅ DDoS 防護
+**Advantages**:
+- ✅ HTTPS encryption
+- ✅ Globally accessible
+- ✅ No need for port forwarding or VPN
+- ✅ DDoS protection
 
-### 相關文件
+### Related Documents
 
-- `ucp_server/README.md` - UCP Server 完整說明
-- `.github/copilot-instructions.md` - 開發指南
-- `BESTBUY_API_INTEGRATION_ANALYSIS.md` - API 整合分析
+- `ucp_server/README.md` - Complete UCP Server documentation
+- `.github/copilot-instructions.md` - Development guide
+- `BESTBUY_API_INTEGRATION_ANALYSIS.md` - API integration analysis

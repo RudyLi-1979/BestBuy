@@ -1,36 +1,36 @@
-# API 測試指南
+# API Testing Guide
 
-## BestBuy API 端點測試
+## BestBuy API Endpoint Tests
 
-### 1. 測試產品搜尋 (UPC)
+### 1. Test Product Search (UPC)
 
-使用以下 curl 命令測試 API：
+Use the following curl command to test the API:
 
 ```bash
 curl "https://api.bestbuy.com/v1/products(upc=190199246850)?apiKey=YOUR_API_KEY&format=json"
 ```
 
-### 2. 測試產品詳情 (SKU)
+### 2. Test Product Details (SKU)
 
 ```bash
 curl "https://api.bestbuy.com/v1/products/6443036.json?apiKey=YOUR_API_KEY"
 ```
 
-### 3. 測試推薦商品
+### 3. Test Recommended Products
 
 ```bash
 curl "https://api.bestbuy.com/v1/products/6443036/recommendations.json?apiKey=YOUR_API_KEY"
 ```
 
-### 4. 測試 Also Viewed
+### 4. Test Also Viewed
 
 ```bash
 curl "https://api.bestbuy.com/v1/products/6443036/alsoViewed.json?apiKey=YOUR_API_KEY"
 ```
 
-## 測試用 UPC 碼
+## Test UPC Codes
 
-| 產品名稱 | UPC 碼 |
+| Product Name | UPC Code |
 |---------|--------|
 | Apple AirPods Pro | 190199246850 |
 | Samsung Galaxy | 887276311111 |
@@ -38,103 +38,103 @@ curl "https://api.bestbuy.com/v1/products/6443036/alsoViewed.json?apiKey=YOUR_AP
 | Nintendo Switch | 045496590062 |
 | Xbox Series X | 889842640670 |
 
-## 應用程式測試步驟
+## Application Testing Steps
 
-### 功能測試
+### Functional Testing
 
-1. **條碼掃描測試**
-   - 開啟應用程式
-   - 授予相機權限
-   - 掃描實體產品條碼
-   - 驗證產品資訊正確顯示
+1. **Barcode Scanning Test**
+   - Open the application
+   - Grant camera permission
+   - Scan physical product barcode
+   - Verify that product information is displayed correctly
 
-2. **手動輸入測試**
-   - 點擊「手動輸入 UPC」
-   - 輸入測試用 UPC（例如：190199246850）
-   - 驗證產品資訊載入
+2. **Manual Input Test**
+   - Click \"Manual Input UPC\"
+   - Input test UPC (e.g.: 190199246850)
+   - Verify that product information is loaded
 
-3. **產品詳情測試**
-   - 檢查產品名稱、圖片顯示
-   - 檢查價格資訊（含特價標示）
-   - 檢查產品說明
-   - 檢查庫存狀態
-   - 檢查顧客評價
+3. **Product Details Test**
+   - Check product name and image display
+   - Check price information (including sale price indicators)
+   - Check product description
+   - Check inventory status
+   - Check customer reviews
 
-4. **推薦商品測試**
-   - 驗證推薦商品列表顯示
-   - 驗證「其他人也看了」列表顯示
-   - 點擊推薦商品進入詳情頁
-   - 驗證導航功能正常
+4. **Recommended Products Test**
+   - Verify that the recommended products list is displayed
+   - Verify that the \"Others Also Viewed\" list is displayed
+   - Click on recommended products to view details
+   - Verify that navigation functions normally
 
-5. **外部連結測試**
-   - 點擊「在 BestBuy 查看」
-   - 驗證瀏覽器正確開啟
-   - 點擊「加入購物車」
-   - 驗證連結正確
+5. **External Link Test**
+   - Click \"View on BestBuy\"
+   - Verify that the browser opens correctly
+   - Click \"Add to Cart\"
+   - Verify that the link is correct
 
-### 錯誤處理測試
+### Error Handling Tests
 
-1. **無網路連線**
-   - 關閉網路連線
-   - 嘗試掃描條碼
-   - 驗證錯誤訊息顯示
+1. **No Network Connection**
+   - Disconnect from the network
+   - Try scanning a barcode
+   - Verify that an error message is displayed
 
-2. **無效的 UPC**
-   - 輸入無效的 UPC（例如：000000000000）
-   - 驗證「未找到產品」訊息
+2. **Invalid UPC**
+   - Enter an invalid UPC (e.g.: 000000000000)
+   - Verify that a "Product Not Found" message is displayed
 
-3. **API 限制**
-   - 快速連續掃描多個條碼
-   - 驗證 API 限制處理
+3. **API Limits**
+   - Quickly scan multiple barcodes in succession
+   - Verify API limit handling
 
-### 效能測試
+### Performance Testing
 
-1. **記憶體使用**
-   - 使用 Android Profiler 監控記憶體使用
-   - 連續瀏覽多個產品
-   - 檢查是否有記憶體洩漏
+1. **Memory Usage**
+   - Use Android Profiler to monitor memory usage
+   - Continuously browse multiple products
+   - Check for memory leaks
 
-2. **網路效能**
-   - 監控 API 請求時間
-   - 檢查圖片載入速度
-   - 驗證快取機制
+2. **Network Performance**
+   - Monitor API request times
+   - Check image loading speed
+   - Verify caching mechanism
 
-## 常見問題排除
+## Troubleshooting
 
-### API 返回 401 錯誤
-- 檢查 API Key 是否正確設定
-- 確認 API Key 在 BestBuy Developer Portal 中有效
+### API Returns 401 Error
+- Check if the API Key is set correctly
+- Confirm that the API Key is valid in the BestBuy Developer Portal
 
-### API 返回 404 錯誤
-- 產品可能不存在於 BestBuy 資料庫
-- 嘗試其他測試用 UPC
+### API Returns 404 Error
+- The product may not exist in the BestBuy database
+- Try other test UPCs
 
-### 推薦商品不顯示
-- 並非所有產品都有推薦資料
-- 這是正常現象，可嘗試其他產品
+### Recommended Products Not Showing
+- Not all products have recommendation data
+- This is normal; try other products
 
-### 掃描速度慢
-- 確保光線充足
-- 保持相機穩定
-- 條碼清晰可見
+### Scanning Speed is Slow
+- Ensure adequate lighting
+- Keep the camera stable
+- Barcode should be clear and visible
 
-## Logcat 除錯
+## Logcat Debugging
 
-查看 API 請求的詳細日誌：
+View detailed logs of API requests:
 
 ```bash
 adb logcat | grep -E "BestBuy|OkHttp|Retrofit"
 ```
 
-## 建議的測試裝置
+## Recommended Test Devices
 
-- **實體裝置**: 建議使用實體裝置測試相機功能
-- **最低 API**: Android 7.0 (API 24)
-- **建議 API**: Android 10 (API 29) 或更高
+- **Physical Device**: It is recommended to use a physical device to test camera functionality
+- **Minimum API**: Android 7.0 (API 24)
+- **Recommended API**: Android 10 (API 29) or higher
 
-## 自動化測試（未來實作）
+## Automated Testing (Future Implementation)
 
-可以考慮加入：
+Can be considered for addition:
 - Unit Tests (JUnit)
 - UI Tests (Espresso)
 - Integration Tests

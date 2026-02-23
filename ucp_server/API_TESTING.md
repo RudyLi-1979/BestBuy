@@ -1,61 +1,61 @@
-# API 端點測試指南
+# API Endpoint Testing Guide
 
-本文件提供 UCP Server API 端點的測試方法和範例。
+This document provides testing methods and examples for the UCP Server API endpoints.
 
-## 前置條件
+## Prerequisites
 
-確保 UCP Server 正在運行：
+Ensure the UCP Server is running:
 ```powershell
 cd c:\Users\rudy\AndroidStudioProjects\BestBuy\ucp_server
 uvicorn app.main:app --reload --port 8000
 ```
 
-## API 文件
+## API Documentation
 
-訪問 Swagger UI 查看完整 API 文件：
+Access Swagger UI to view complete API documentation:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
 ---
 
-## 1. Products API 測試
+## 1. Products API Testing
 
-### 1.1 關鍵字搜尋商品
+### 1.1 Search products by keyword
 
 ```powershell
-# 搜尋 iPhone
+# Search for iPhone
 curl "http://localhost:8000/products/search?q=iPhone&page_size=5"
 
-# 搜尋並排序
+# Search and sort
 curl "http://localhost:8000/products/search?q=laptop&page_size=10&sort=salePrice.asc"
 ```
 
-### 1.2 SKU 查詢
+### 1.2 Query by SKU
 
 ```powershell
-# 查詢特定商品（需要真實的 SKU）
+# Query specific product (requires actual SKU)
 curl "http://localhost:8000/products/6428324"
 ```
 
-### 1.3 UPC 查詢
+### 1.3 Query by UPC
 
 ```powershell
-# 使用 UPC 條碼查詢
+# Query by UPC barcode
 curl "http://localhost:8000/products/upc/195949038488"
 ```
 
-### 1.4 推薦商品
+### 1.4 Recommended Products
 
 ```powershell
-# 獲取推薦商品
+# Get recommended products
 curl "http://localhost:8000/products/6428324/recommendations"
 ```
 
 ---
 
-## 2. Cart API 測試
+## 2. Cart API Testing
 
-### 2.1 加入商品到購物車
+### 2.1 Add product to cart
 
 ```powershell
 curl -X POST "http://localhost:8000/cart/add" `
@@ -69,33 +69,33 @@ curl -X POST "http://localhost:8000/cart/add" `
   }'
 ```
 
-### 2.2 查看購物車
+### 2.2 View cart
 
 ```powershell
 curl "http://localhost:8000/cart"
 ```
 
-### 2.3 更新商品數量
+### 2.3 Update product quantity
 
 ```powershell
-# 更新數量為 2
+# Update quantity to 2
 curl -X PUT "http://localhost:8000/cart/items/6428324" `
   -H "Content-Type: application/json" `
   -d '{"quantity": 2}'
 
-# 設定數量為 0 移除商品
+# Set quantity to 0 to remove product
 curl -X PUT "http://localhost:8000/cart/items/6428324" `
   -H "Content-Type: application/json" `
   -d '{"quantity": 0}'
 ```
 
-### 2.4 移除商品
+### 2.4 Remove product
 
 ```powershell
 curl -X DELETE "http://localhost:8000/cart/items/6428324"
 ```
 
-### 2.5 清空購物車
+### 2.5 Clear cart
 
 ```powershell
 curl -X DELETE "http://localhost:8000/cart"
@@ -103,16 +103,16 @@ curl -X DELETE "http://localhost:8000/cart"
 
 ---
 
-## 3. Checkout API 測試
+## 3. Checkout API Testing
 
-### 3.1 建立結帳會話
+### 3.1 Create checkout session
 
 ```powershell
-# 先加入商品到購物車，然後建立結帳會話
+# Add product to shopping cart first, then create checkout session
 curl -X POST "http://localhost:8000/checkout/session"
 ```
 
-回應範例：
+Example response:
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -122,10 +122,10 @@ curl -X POST "http://localhost:8000/checkout/session"
 }
 ```
 
-### 3.2 更新配送資訊
+### 3.2 Update Shipping Information
 
 ```powershell
-# 使用上一步獲得的 session_id
+# Use the session_id obtained from the previous step
 curl -X POST "http://localhost:8000/checkout/session/{session_id}/update" `
   -H "Content-Type: application/json" `
   -d '{
@@ -137,14 +137,14 @@ curl -X POST "http://localhost:8000/checkout/session/{session_id}/update" `
   }'
 ```
 
-### 3.3 完成結帳
+### 3.3 Complete Checkout
 
 ```powershell
-# 完成結帳並建立訂單
+# Complete checkout and create order
 curl -X POST "http://localhost:8000/checkout/session/{session_id}/complete"
 ```
 
-回應範例：
+Example response:
 ```json
 {
   "id": 1,
@@ -157,38 +157,38 @@ curl -X POST "http://localhost:8000/checkout/session/{session_id}/complete"
 
 ---
 
-## 4. Orders API 測試
+## 4. Orders API Testing
 
-### 4.1 查詢所有訂單
+### 4.1 Query All Orders
 
 ```powershell
 curl "http://localhost:8000/orders"
 ```
 
-### 4.2 查詢特定訂單
+### 4.2 Query Specific Order
 
 ```powershell
-# 使用訂單編號查詢
+# Query by order number
 curl "http://localhost:8000/orders/ORD-20260212-001"
 ```
 
-### 4.3 更新訂單狀態（管理功能）
+### 4.3 Update Order Status (Admin Feature)
 
 ```powershell
 curl -X PUT "http://localhost:8000/orders/ORD-20260212-001/status?status=shipped"
 ```
 
-可用狀態：
-- `pending` - 待處理
-- `confirmed` - 已確認
-- `processing` - 處理中
-- `shipped` - 已出貨
-- `delivered` - 已送達
-- `cancelled` - 已取消
+Available statuses:
+- `pending` - Pending
+- `confirmed` - Confirmed
+- `processing` - Processing
+- `shipped` - Shipped
+- `delivered` - Delivered
+- `cancelled` - Cancelled
 
 ---
 
-## 5. UCP Profile 測試
+## 5. UCP Profile Testing
 
 ```powershell
 curl "http://localhost:8000/.well-known/ucp"
@@ -196,15 +196,15 @@ curl "http://localhost:8000/.well-known/ucp"
 
 ---
 
-## 完整購物流程測試
+## Complete Shopping Workflow Test
 
-以下是一個完整的購物流程範例：
+Below is a complete shopping workflow example:
 
 ```powershell
-# 1. 搜尋商品
+# 1. Search for products
 curl "http://localhost:8000/products/search?q=iPhone"
 
-# 2. 加入購物車
+# 2. Add product to cart
 curl -X POST "http://localhost:8000/cart/add" `
   -H "Content-Type: application/json" `
   -d '{
@@ -214,13 +214,13 @@ curl -X POST "http://localhost:8000/cart/add" `
     "quantity": 1
   }'
 
-# 3. 查看購物車
+# 3. View cart
 curl "http://localhost:8000/cart"
 
-# 4. 建立結帳會話
+# 4. Create checkout session
 curl -X POST "http://localhost:8000/checkout/session"
 
-# 5. 更新配送資訊（使用上一步的 session_id）
+# 5. Update shipping information (use session_id from previous step)
 curl -X POST "http://localhost:8000/checkout/session/{session_id}/update" `
   -H "Content-Type: application/json" `
   -d '{
@@ -230,33 +230,33 @@ curl -X POST "http://localhost:8000/checkout/session/{session_id}/update" `
     "shipping_postal_code": "10001"
   }'
 
-# 6. 完成結帳
+# 6. Complete checkout
 curl -X POST "http://localhost:8000/checkout/session/{session_id}/complete"
 
-# 7. 查詢訂單
+# 7. Query orders
 curl "http://localhost:8000/orders"
 ```
 
 ---
 
-## 注意事項
+## Important Notes
 
-1. **Guest User ID**: 目前系統使用簡化的 Guest Checkout，每次請求會自動生成 guest user ID
-2. **Best Buy API Key**: 確保 `.env` 檔案中的 `BESTBUY_API_KEY` 已正確設定
-3. **真實 SKU/UPC**: 測試時需要使用 Best Buy API 中真實存在的 SKU 或 UPC
-4. **Session ID**: 結帳流程中的 `session_id` 需要從建立會話的回應中獲取
+1. **Guest User ID**: The system currently uses simplified Guest Checkout, automatically generating a guest user ID for each request
+2. **Best Buy API Key**: Ensure `BESTBUY_API_KEY` in `.env` file is correctly configured
+3. **Real SKU/UPC**: Testing requires valid SKU or UPC from Best Buy API
+4. **Session ID**: The `session_id` in checkout flow must be obtained from the create session response
 
 ---
 
-## 使用 Swagger UI 測試
+## Testing with Swagger UI
 
-最簡單的測試方式是使用 Swagger UI：
+The easiest way to test is to use Swagger UI:
 
-1. 訪問 http://localhost:8000/docs
-2. 展開任一 API 端點
-3. 點擊「Try it out」
-4. 填入參數
-5. 點擊「Execute」
-6. 查看回應結果
+1. Visit http://localhost:8000/docs
+2. Expand any API endpoint
+3. Click "Try it out"
+4. Enter parameters
+5. Click "Execute"
+6. View the response result
 
-這樣可以直接在瀏覽器中測試所有 API 端點！
+This allows testing all API endpoints directly in the browser!

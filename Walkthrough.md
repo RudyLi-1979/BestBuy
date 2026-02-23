@@ -1,184 +1,184 @@
 # Walkthrough: BestBuy Scanner App Development
 
-## 最新完成：Chat-First 架構 + UCP Server + 新功能實作 (2026-02-13)
+## Latest Completion: Chat-First Architecture + UCP Server + New Features Implementation (2026-02-13)
 
-### 功能概述
-成功將應用程式重構為 **Chat-First 架構**，整合 **Gemini 2.5 Flash AI** 和本地 **UCP Server**，提供智能對話購物體驗。
+### Feature Overview
+Successfully restructured the application to a **Chat-First Architecture**, integrated **Gemini 2.5 Flash AI** and local **UCP Server** to provide intelligent conversational shopping experience.
 
-### 已完成的核心功能
+### Completed Core Features
 
-#### 1. Chat Mode 成為主要功能 ✅
-- **ChatActivity** 為應用程式啟動畫面（LAUNCHER）
-- **語音輸入**: 使用 Speech Recognition API
-- **掃描按鈕**: 點擊啟動 MainActivity 進行條碼掃描
-- **返回機制**: MainActivity 掃描後返回 ChatActivity
+#### 1. Chat Mode Becomes Main Feature ✅
+- **ChatActivity** is the application launch screen (LAUNCHER)
+- **Voice Input**: Using Speech Recognition API
+- **Scan Button**: Click to launch MainActivity for barcode scanning
+- **Return Mechanism**: MainActivity returns to ChatActivity after scanning
 
-#### 2. UCP Server 後端 ✅
-- **框架**: Python FastAPI
-- **AI 模型**: Gemini 2.5 Flash
-- **功能**: 
-  - Chat API (`/chat`) 處理對話
-  - Gemini Function Calling 執行搜尋、查詢庫存等操作
-  - 智能搜尋優化（規格篩選、關聯性評分）
-- **部署**: Cloudflare Tunnel (https://ucp.rudy.xx.kg)
+#### 2. UCP Server Backend ✅
+- **Framework**: Python FastAPI
+- **AI Model**: Gemini 2.5 Flash
+- **Features**: 
+  - Chat API (`/chat`) handles conversations
+  - Gemini Function Calling executes search, inventory queries, etc.
+  - Intelligent search optimization (specification filtering, relevance scoring)
+- **Deployment**: Cloudflare Tunnel (https://ucp.rudy.xx.kg)
 
-#### 3. 聊天產品卡片 ✅
-- **ChatProductAdapter**: 在聊天訊息中顯示產品卡片
-- **Horizontal RecyclerView**: 橫向滑動瀏覽產品
-- **點擊查看詳情**: 卡片點擊打開 ProductDetailActivity
-- **資料來源**: UCP Server /chat API 返回產品列表
+#### 3. Chat Product Cards ✅
+- **ChatProductAdapter**: Display product cards in chat messages
+- **Horizontal RecyclerView**: Swipe through products horizontally
+- **Click for Details**: Card click opens ProductDetailActivity
+- **Data Source**: Product list returned from UCP Server /chat API
 
-#### 4. 新功能實作 (2026-02-13) ✅
+#### 4. New Features Implementation (2026-02-13) ✅
 
-**門市庫存查詢 (Store Availability)**
-- 查詢附近實體門市的產品庫存
-- 支援 ZIP code 定位
-- 顯示門市資訊、距離、庫存狀態
+**Store Inventory Query (Store Availability)**
+- Query product inventory at nearby physical stores
+- Support ZIP code location
+- Display store information, distance, inventory status
 - Gemini function: `check_store_availability()`
 
-**Also Bought 推薦**
-- 顯示經常一起購買的商品
-- 交叉銷售功能
-- 提高平均訂單價值
+**Also Bought Recommendations**
+- Display products frequently purchased together
+- Cross-selling functionality
+- Increase average order value
 - Gemini function: `get_also_bought()`
 
-**進階搜尋 (Advanced Search)**
-- 多條件篩選：製造商、價格範圍、分類、運送選項、特價狀態
-- 智能規格匹配
-- 關聯性評分和排序
+**Advanced Search (Advanced Search)**
+- Multi-criteria filtering: manufacturer, price range, categories, shipping options, sale status
+- Intelligent specification matching
+- Relevance scoring and sorting
 - Gemini function: `advanced_product_search()`
 
-### 相關文件
-- `.github/copilot-instructions.md` - AI Agent 開發指南
-- `ucp_server/README.md` - UCP Server 設置指南
-- `BESTBUY_API_INTEGRATION_ANALYSIS.md` - Best Buy API 整合分析
+### Related Documents
+- `.github/copilot-instructions.md` - AI Agent development guide
+- `ucp_server/README.md` - UCP Server setup guide
+- `BESTBUY_API_INTEGRATION_ANALYSIS.md` - Best Buy API integration analysis
 
 ---
 
-## 階段一：個人化推薦功能 (2026-02-12)
+## Phase 1: Personalized Recommendation Feature (2026-02-12)
 
-### 功能概述
-成功實現基於用戶行為的個人化推薦系統，能夠追蹤用戶互動並生成個性化的商品推薦。
+### Feature Overview
+Successfully implemented a personalized recommendation system based on user behavior that can track user interactions and generate personalized product recommendations.
 
-### 實現的核心功能
-- ✅ 自動追蹤用戶行為（VIEW, SCAN, ADD_TO_CART）
-- ✅ 分析用戶最喜歡的商品類別
-- ✅ 基於類別偏好生成個人化推薦
-- ✅ 過濾已瀏覽商品避免重複
-- ✅ 最小互動次數門檻（5次）確保推薦品質
+### Implemented Core Features
+- ✅ Automatically track user behavior (VIEW, SCAN, ADD_TO_CART)
+- ✅ Analyze user's favorite product categories
+- ✅ Generate personalized recommendations based on category preferences
+- ✅ Filter viewed products to avoid duplicates
+- ✅ Minimum interaction threshold (5) to ensure recommendation quality
 
-### 新增/修改的檔案
+### New/Modified Files
 
-#### 數據層 (9個新檔案 + 1個修改)
-1. [`UserInteraction.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/model/UserInteraction.kt) - 用戶互動實體
-2. [`UserInteractionDao.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/dao/UserInteractionDao.kt) - 數據存取層
-3. [`AppDatabase.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/database/AppDatabase.kt) - 升級至 v2，新增 Migration
-4. [`UserBehaviorRepository.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/repository/UserBehaviorRepository.kt) - 行為追蹤儲存庫
-5. [`RecommendationEngine.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/recommendation/RecommendationEngine.kt) - 推薦引擎
-6. [`RecommendationRepository.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/repository/RecommendationRepository.kt) - 推薦儲存庫
-7. [`BestBuyApiService.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/api/BestBuyApiService.kt) - 新增 getMostViewed API
+#### Data Layer (9 new files + 1 modified)
+1. [`UserInteraction.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/model/UserInteraction.kt) - User interaction entity
+2. [`UserInteractionDao.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/dao/UserInteractionDao.kt) - Data access layer
+3. [`AppDatabase.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/database/AppDatabase.kt) - Upgraded to v2, added Migration
+4. [`UserBehaviorRepository.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/repository/UserBehaviorRepository.kt) - Behavior tracking repository
+5. [`RecommendationEngine.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/recommendation/RecommendationEngine.kt) - Recommendation engine
+6. [`RecommendationRepository.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/repository/RecommendationRepository.kt) - Recommendation repository
+7. [`BestBuyApiService.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/api/BestBuyApiService.kt) - Added getMostViewed API
 
-#### ViewModel & UI層 (3個新檔案 + 3個修改)
-8. [`RecommendationViewModel.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/viewmodel/RecommendationViewModel.kt) - 推薦 ViewModel
-9. [`PersonalizedRecommendationAdapter.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/adapter/PersonalizedRecommendationAdapter.kt) - 推薦卡片適配器
-10. [`item_recommendation_card.xml`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/res/layout/item_recommendation_card.xml) - 推薦卡片佈局
-11. [`MainActivity.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/MainActivity.kt) - 新增掃描追蹤
-12. [`ProductDetailActivity.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/ProductDetailActivity.kt) - 新增 "For You" 區塊
-13. [`activity_product_detail.xml`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/res/layout/activity_product_detail.xml) - 新增 UI 區塊
+#### ViewModel & UI Layer (3 new files + 3 modified)
+8. [`RecommendationViewModel.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/viewmodel/RecommendationViewModel.kt) - Recommendation ViewModel
+9. [`PersonalizedRecommendationAdapter.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/adapter/PersonalizedRecommendationAdapter.kt) - Recommendation card adapter
+10. [`item_recommendation_card.xml`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/res/layout/item_recommendation_card.xml) - Recommendation card layout
+11. [`MainActivity.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/MainActivity.kt) - Added scan tracking
+12. [`ProductDetailActivity.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/ProductDetailActivity.kt) - Added "For You" block
+13. [`activity_product_detail.xml`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/res/layout/activity_product_detail.xml) - Added UI block
 
-### 技術亮點
-- **數據庫遷移**：從 v1 升級至 v2，平滑遷移無數據丟失
-- **推薦演算法**：基於類別偏好的協同過濾
-- **品質控制**：最小互動次數門檻避免低質量推薦
-- **用戶體驗**：數據不足時自動隱藏推薦區塊
+### Technical Highlights
+- **Database Migration**: Upgraded from v1 to v2 with smooth migration and no data loss
+- **Recommendation Algorithm**: Collaborative filtering based on category preferences
+- **Quality Control**: Minimum interaction threshold avoids low-quality recommendations
+- **User Experience**: Recommendation block automatically hides when data is insufficient
 
-詳細文檔：
+Detailed documentation:
 - [`Implementation_Phase1_Recommendations.md`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/Implementation_Phase1_Recommendations.md)
 - [`recommendation_quality_improvement.md`](file:///C:/Users/rudy/.gemini/antigravity/brain/7e5776d1-786a-42f7-9823-1efb21b83dcf/recommendation_quality_improvement.md)
 
 ---
 
-## 購物車功能實現 (Shopping Cart Implementation)
+## Shopping Cart Implementation
 
-## 完成項目 (Completed Items)
+## Completed Items
 
 ### 1. Data Layer - Room Database
 
-#### 1.1 資料模型
+#### 1.1 Data Model
 ✅ [`CartItem.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/model/CartItem.kt)
-- Room Entity 定義購物車商品結構
-- 包含 SKU、名稱、價格、圖片、數量、新增時間
+- Room Entity defines shopping cart item structure
+- Contains SKU, name, price, image, quantity, and add time
 
-#### 1.2 資料存取層
+#### 1.2 Data Access Layer
 ✅ [`CartDao.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/dao/CartDao.kt)
-- 提供 CRUD 操作
-- 使用 Flow 實現響應式資料更新
-- 支援查詢、新增、更新、刪除、清空購物車
+- Provides CRUD operations
+- Uses Flow for reactive data updates
+- Supports query, add, update, delete, and clear shopping cart
 
-#### 1.3 資料庫
+#### 1.3 Database
 ✅ [`AppDatabase.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/database/AppDatabase.kt)
-- Room Database 單例模式
-- 版本 1,包含 CartItem 實體
+- Room Database singleton pattern
+- Version 1, contains CartItem entity
 
 #### 1.4 Repository
 ✅ [`CartRepository.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/repository/CartRepository.kt)
-- 封裝資料操作邏輯
-- 自動處理商品數量增加(若商品已存在)
-- 數量為 0 時自動移除商品
+- Encapsulates data operation logic
+- Automatically increases quantity if item already exists
+- Automatically removes item when quantity is 0
 
 ---
 
 ### 2. ViewModel Layer
 
 ✅ [`CartViewModel.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/viewmodel/CartViewModel.kt)
-- 管理購物車 UI 狀態
-- 提供 LiveData:
-  - `cartItems`: 購物車商品列表
-  - `itemCount`: 商品總數
-  - `totalPrice`: 總金額(自動計算)
-- 提供操作方法:
-  - `addToCart()`: 新增商品
-  - `updateQuantity()`: 更新數量
-  - `removeItem()`: 移除商品
-  - `clearCart()`: 清空購物車
+- Manages shopping cart UI state
+- Provides LiveData:
+  - `cartItems`: List of shopping cart items
+  - `itemCount`: Total item count
+  - `totalPrice`: Total price (automatically calculated)
+- Provides operation methods:
+  - `addToCart()`: Add item
+  - `updateQuantity()`: Update quantity
+  - `removeItem()`: Remove item
+  - `clearCart()`: Clear shopping cart
 
 ---
 
 ### 3. UI Layer
 
-#### 3.1 購物車主畫面
+#### 3.1 Shopping Cart Main Screen
 ✅ [`activity_cart.xml`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/res/layout/activity_cart.xml)
-- RecyclerView 顯示購物車商品
-- 空狀態提示(當購物車為空)
-- 底部 Bar 顯示總金額
-- Clear Cart 和 Checkout 按鈕
+- RecyclerView displays shopping cart items
+- Empty state message (when shopping cart is empty)
+- Bottom bar displays total price
+- Clear Cart and Checkout buttons
 
 ✅ [`CartActivity.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/CartActivity.kt)
-- 觀察 ViewModel 資料變化
-- 處理商品數量調整
-- 確認對話框(移除商品、清空購物車)
-- Checkout 對話框(顯示總金額,提示為測試 App)
+- Observes ViewModel data changes
+- Handles item quantity adjustment
+- Confirmation dialog (removing item, clearing shopping cart)
+- Checkout dialog (displays total price, reminds testing app)
 
-#### 3.2 購物車商品項目
+#### 3.2 Shopping Cart Item
 ✅ [`item_cart.xml`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/res/layout/item_cart.xml)
-- 商品圖片、名稱、單價
-- 數量控制按鈕(+/-)
-- 移除按鈕
-- 小計顯示
+- Item image, name, unit price
+- Quantity control buttons (+/-)
+- Remove button
+- Subtotal display
 
 ✅ [`CartAdapter.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/adapter/CartAdapter.kt)
 - RecyclerView Adapter
-- DiffUtil 優化列表更新
-- 處理數量變更和移除事件
+- DiffUtil optimizes list update
+- Handles quantity change and remove events
 
 ---
 
-### 4. 整合現有功能
+### 4. Integration with Existing Features
 
-#### 4.1 ProductDetailActivity 更新
+#### 4.1 ProductDetailActivity Update
 ✅ [`ProductDetailActivity.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/ProductDetailActivity.kt)
 
-**變更前:**
+**Before:**
 ```kotlin
 binding.btnAddToCart.setOnClickListener {
     val url = product.addToCartUrl ?: product.productUrl
@@ -189,7 +189,7 @@ binding.btnAddToCart.setOnClickListener {
 }
 ```
 
-**變更後:**
+**After:**
 ```kotlin
 binding.btnAddToCart.setOnClickListener {
     cartViewModel.addToCart(product)
