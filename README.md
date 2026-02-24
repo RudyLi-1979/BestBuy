@@ -37,9 +37,16 @@ A full-featured **Chat-First** Android shopping application that integrates **Ge
   - Real-time display of the total amount
   - Click on a cart item to view its details
   - Data persistence (using Room Database)
+  - **Toolbar Cart Icon**: Displays live item count (badge) + total price below icon in ChatActivity
+  - **Always-Visible Cart Summary**: Bottom bar in CartActivity always shows item count + total (0 items / $0.00 when empty)
 - 🏪 **Store Inventory Check**: Check product inventory at nearby physical stores (BOPIS)
 - 🛍️ **Also Bought Recommendations**: Displays items frequently bought together
-- 🔍 **Advanced Search**: Multi-condition filtering (manufacturer, price range, shipping options, etc.)
+- � **Chat History Persistence**: Product cards in chat messages survive app restarts
+  - Each message (including product cards) stored locally to Room DB
+  - Products serialized as JSON with Gson and stored in `ChatMessageEntity`
+  - History loaded from local DB — no server round-trip needed
+  - Session-scoped storage (`sessionId`), independently clearable
+- �🔍 **Advanced Search**: Multi-condition filtering (manufacturer, price range, shipping options, etc.)
 - 🔄 **Screen Rotation Support**: Retains product information when the device is rotated
 - 🌐 **Cloudflare Tunnel**: Globally accessible UCP Server connection
 
@@ -53,7 +60,7 @@ A full-featured **Chat-First** Android shopping application that integrates **Ge
 - **Barcode Scanning**: ML Kit Barcode Scanning
 - **Networking**: Retrofit + OkHttp
 - **Image Loading**: Glide
-- **Data Persistence**: Room Database v2
+- **Data Persistence**: Room Database v3
 - **Asynchronous Processing**: Kotlin Coroutines + Flow
 - **Dependency Injection**: Manual DI
 
@@ -79,12 +86,14 @@ A full-featured **Chat-First** Android shopping application that integrates **Ge
 │       │   │   └── UCPRetrofitClient.kt      # UCP Client
 │   │   ├── dao/
 │   │   │   ├── CartDao.kt                # Cart Data Access Object
+│   │   │   ├── ChatMessageDao.kt         # Chat Message Data Access Object
 │   │   │   └── UserInteractionDao.kt     # User Interaction Data Access Object
 │   │   ├── database/
-│   │   │   └── AppDatabase.kt            # Room Database (v2)
+│   │   │   └── AppDatabase.kt            # Room Database (v3)
 │   │   ├── model/
 │   │   │   ├── Product.kt                # Product Data Model
 │   │   │   ├── CartItem.kt               # Cart Item Data Model
+│   │   │   ├── ChatMessageEntity.kt      # Chat Message Room Entity
 │   │   │   └── UserInteraction.kt        # User Interaction Data Model
 │   │   ├── recommendation/
 │   │   │   └── RecommendationEngine.kt   # Recommendation Engine

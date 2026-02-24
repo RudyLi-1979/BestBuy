@@ -107,12 +107,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     /**
-     * Load conversation history
+     * Load conversation history from local Room DB.
+     * The local DB persists products attached to each AI message,
+     * so product cards are visible even after the app is restarted.
      */
     private fun loadHistory() {
         viewModelScope.launch {
             try {
-                val result = chatRepository.getHistory()
+                val result = chatRepository.getLocalHistory()
                 result.onSuccess { history ->
                     _messages.value = history
                 }

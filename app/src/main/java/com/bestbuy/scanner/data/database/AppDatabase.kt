@@ -7,22 +7,25 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.bestbuy.scanner.data.dao.CartDao
+import com.bestbuy.scanner.data.dao.ChatMessageDao
 import com.bestbuy.scanner.data.dao.UserInteractionDao
 import com.bestbuy.scanner.data.model.CartItem
+import com.bestbuy.scanner.data.model.ChatMessageEntity
 import com.bestbuy.scanner.data.model.UserInteraction
 
 /**
  * Room database for BestBuy Scanner app
  */
 @Database(
-    entities = [CartItem::class, UserInteraction::class],
-    version = 2,
+    entities = [CartItem::class, UserInteraction::class, ChatMessageEntity::class],
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     
     abstract fun cartDao(): CartDao
     abstract fun userInteractionDao(): UserInteractionDao
+    abstract fun chatMessageDao(): ChatMessageDao
     
     companion object {
         @Volatile
@@ -51,6 +54,26 @@ abstract class AppDatabase : RoomDatabase() {
         }
         
         /**
+         * Migration from version 2 to 3: Add chat_messages table for local chat persistence
+         */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS chat_messages (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        sessionId TEXT NOT NULL,
+                        role TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        productsJson TEXT
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        /**
          * Get database instance (singleton pattern)
          */
         fun getDatabase(context: Context): AppDatabase {
@@ -60,7 +83,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "bestbuy_database"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                 INSTANCE = instance
                 instance

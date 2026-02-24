@@ -65,25 +65,31 @@ class CartActivity : AppCompatActivity() {
     }
     
     private fun setupObservers() {
+        val priceFormat = NumberFormat.getCurrencyInstance(Locale.US)
+
         // Observe cart items
         viewModel.cartItems.observe(this) { items ->
             adapter.submitList(items)
-            
-            // Show/hide empty state
+
+            // Show/hide empty state — bottom bar is ALWAYS visible
             if (items.isEmpty()) {
                 binding.emptyView.visibility = View.VISIBLE
                 binding.rvCartItems.visibility = View.GONE
-                binding.bottomBar.visibility = View.GONE
             } else {
                 binding.emptyView.visibility = View.GONE
                 binding.rvCartItems.visibility = View.VISIBLE
-                binding.bottomBar.visibility = View.VISIBLE
             }
+            binding.bottomBar.visibility = View.VISIBLE
+
+            // Update item count
+            val count = items.sumOf { it.quantity }
+            binding.tvItemCount.text = if (count == 0) "0 items"
+                                       else if (count == 1) "1 item"
+                                       else "$count items"
         }
-        
+
         // Observe total price
         viewModel.totalPrice.observe(this) { total ->
-            val priceFormat = NumberFormat.getCurrencyInstance(Locale.US)
             binding.tvTotalPrice.text = priceFormat.format(total)
         }
     }

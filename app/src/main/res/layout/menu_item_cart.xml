@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Custom menu item layout for cart icon with item count badge -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="48dp"
+    android:layout_height="48dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackgroundBorderless">
+
+    <ImageView
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_gravity="center"
+        android:contentDescription="Shopping Cart"
+        android:src="@drawable/ic_cart" />
+
+    <!-- Badge circle -->
+    <TextView
+        android:id="@+id/cart_badge_count"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
+        android:background="@drawable/bg_cart_badge"
+        android:gravity="center"
+        android:text="0"
+        android:textColor="#FFFFFF"
+        android:textSize="10sp"
+        android:textStyle="bold" />
+
+</FrameLayout>

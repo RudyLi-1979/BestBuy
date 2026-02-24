@@ -2,9 +2,30 @@
 
 ## Project Overview
 
-Android barcode scanner app using **MVVM architecture** with CameraX, ML Kit, and BestBuy API integration. Written in **Kotlin** with manual dependency injection (no Hilt/Koin). Includes shopping cart persistence via Room Database, personalized recommendations engine, and Python FastAPI backend for Gemini integration.
+**Chat-First Architecture** Android app combining conversational AI with barcode scanning. Built with **MVVM** (Kotlin) connected to a Python FastAPI backend with Gemini 2.5 Flash integration. Entry point: `ChatActivity` (main screen). Features shopping cart persistence, personalized recommendations, and BOPIS store availability.
+
+## Quick Architecture
+
+```
+ChatActivity (Main) ──→ UCP Server (Python FastAPI)
+   │                         │
+   ├─ Scan Button ──→ MainActivity (Camera/CameraX)
+   ├─ Product Cards                │
+   └─ Chat Messages          Returns result to ChatActivity
+                                   │
+                              Gemini 2.5 Flash
+                              + BestBuy API
+```
 
 ## Critical Patterns
+
+### Chat-First Architecture (Primary Flow)
+- **ChatActivity** is the LAUNCHER - only entry point to app
+- User enters search queries/messages → Sent to UCP server via ChatRepository
+- Gemini 2.5 Flash processes queries, calls Best Buy API functions, returns product cards
+- User can click "📷 Scan" button from ChatActivity → Launches MainActivity
+- MainActivity scans barcode → Returns UPC back to ChatActivity
+- ChatActivity resumes conversation with scanned UPC
 
 ### API Key Management
 - **NEVER hardcode API keys** - always use `BuildConfig.BESTBUY_API_KEY`
@@ -148,10 +169,57 @@ Repository (ProductRepository, CartRepository, RecommendationRepository)
 
 ## Development Workflow
 
-1. **Setup**: Copy `.env.example` → `.env`, add API key
-2. **Build**: `./gradlew build` or Android Studio sync
-3. **Run**: Deploy to physical device (camera required)
-4. **Test**: Scan barcodes or use test UPCs from [QUICKSTART.md](../QUICKSTART.md)
+### Android App Setup
+1. **Setup**: Copy `.env.example` → `.env`, add `BESTBUY_API_KEY`
+   - Gradle automatically reads `.env` at build time via `app/build.gradle.kts`
+   - Access via: `BuildConfig.BESTBUY_API_KEY`
+2. **Build**: `./gradlew clean build` or Android Studio sync
+3. **Run**: Deploy to physical device (camera required for CameraX)
+4. **Test**: ChatActivity opens first → use "📷 Scan" button to launch MainActivity
+
+### Python UCP Server Development
+**Option 1: Docker (Recommended)**
+```powershell
+cd ucp_server
+.\start_docker.ps1        # Starts at http://localhost:58000
+docker-compose logs -f    # View real-time logs
+.\stop_docker.ps1         # Stop service
+```
+
+**Option 2: Local Development**
+```powershell
+cd ucp_server
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 58000
+```
+
+**Testing Backend Features**
+```powershell
+# Test Direct API Functions
+python test_new_features.py
+
+# Test Chat Integration (Gemini + Function Calling)
+python test_chat_new_features.py
+
+# Run All Tests
+.\test_new_features.ps1
+```
+
+### Database Migrations
+When adding new tables to Room (version increment):
+1. Update `AppDatabase.kt` version number: `version = N`
+2. Create migration object:
+```kotlin
+private val MIGRATION_X_Y = object : Migration(X, Y) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("CREATE TABLE IF NOT EXISTS new_table (...)")
+    }
+}
+```
+3. Add to database builder: `.addMigrations(MIGRATION_X_Y)`
+4. **Current version**: 2 (includes CartItem + UserInteraction tables)
 
 ## Code Style
 

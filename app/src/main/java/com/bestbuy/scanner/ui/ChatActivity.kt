@@ -5,7 +5,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.RecognizerIntent
-import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.EditText
@@ -21,6 +20,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bestbuy.scanner.R
 import com.bestbuy.scanner.ui.adapter.ChatAdapter
+import com.bestbuy.scanner.ui.viewmodel.CartViewModel
 import com.bestbuy.scanner.ui.viewmodel.ChatViewModel
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -37,8 +37,11 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var voiceInputButton: ImageButton
     private lateinit var scanButton: ImageButton
     private lateinit var loadingIndicator: ProgressBar
+    private lateinit var cartBadgeTextView: android.widget.TextView
+    private lateinit var cartTotalTextView: android.widget.TextView
     
     private val chatViewModel: ChatViewModel by viewModels()
+    private val cartViewModel: CartViewModel by viewModels()
     private val chatAdapter = ChatAdapter()
     
     // Activity Result Launchers
@@ -89,10 +92,18 @@ class ChatActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat)
-        
-        // Setup ActionBar
-        supportActionBar?.title = getString(R.string.ai_assistant)
-        
+
+        // Setup Toolbar
+        val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.chatToolbar)
+        setSupportActionBar(toolbar)
+
+        // Cart button in toolbar
+        cartBadgeTextView = toolbar.findViewById(R.id.cartBadge)
+        cartTotalTextView = toolbar.findViewById(R.id.cartTotal)
+        toolbar.findViewById<android.view.View>(R.id.cartButton).setOnClickListener {
+            startActivity(Intent(this, CartActivity::class.java))
+        }
+
         // Initialize views
         messagesRecyclerView = findViewById(R.id.messagesRecyclerView)
         messageInput = findViewById(R.id.messageInput)
@@ -125,14 +136,7 @@ class ChatActivity : AppCompatActivity() {
         // Setup observers
         setupObservers()
     }
-    
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_main, menu)
-        // Remove chat mode item since we're already in chat mode
-        menu.findItem(R.id.action_chat)?.isVisible = false
-        return true
-    }
-    
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_cart -> {
@@ -142,11 +146,29 @@ class ChatActivity : AppCompatActivity() {
             else -> super.onOptionsItemSelected(item)
         }
     }
+
+    /**
+     * Update the cart badge count
+     */
+    private fun updateCartBadge(count: Int) {
+        cartBadgeTextView.text = count.toString()
+    }
     
     /**
      * Setup observers for ViewModel state
      */
     private fun setupObservers() {
+        // Observe cart item count (LiveData) – updates badge in ActionBar
+        cartViewModel.itemCount.observe(this) { count ->
+            updateCartBadge(count ?: 0)
+        }
+
+        // Observe cart total price – updates total text below cart icon
+        cartViewModel.totalPrice.observe(this) { total ->
+            val fmt = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.US)
+            cartTotalTextView.text = fmt.format(total ?: 0.0)
+        }
+
         lifecycleScope.launch {
             // Observe messages
             chatViewModel.messages.collect { messages ->

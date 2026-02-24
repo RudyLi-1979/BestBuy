@@ -1,23 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white"
+    android:orientation="vertical"
     tools:context=".ui.ChatActivity">
+
+    <!-- Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/chatToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="?attr/colorPrimary"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        app:title="@string/ai_assistant">
+
+        <!-- Cart button: icon+badge on top, total price below -->
+        <LinearLayout
+            android:id="@+id/cartButton"
+            android:layout_width="64dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="4dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp">
+
+            <!-- Cart icon + badge row -->
+            <FrameLayout
+                android:layout_width="32dp"
+                android:layout_height="32dp">
+
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="Shopping Cart"
+                    android:src="@drawable/ic_cart" />
+
+                <TextView
+                    android:id="@+id/cartBadge"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="top|end"
+                    android:background="@drawable/bg_cart_badge"
+                    android:gravity="center"
+                    android:text="0"
+                    android:textColor="#FFFFFF"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+            </FrameLayout>
+
+            <!-- Total price text -->
+            <TextView
+                android:id="@+id/cartTotal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:text="$0.00"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+    </androidx.appcompat.widget.Toolbar>
 
     <!-- Messages RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/messagesRecyclerView"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:layout_weight="1"
         android:clipToPadding="false"
         android:padding="16dp"
-        app:layout_constraintBottom_toTopOf="@+id/inputContainer"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
         tools:listitem="@layout/item_chat_message_user" />
 
     <!-- Loading Indicator -->
@@ -25,24 +89,19 @@
         android:id="@+id/loadingIndicator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@+id/inputContainer"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         tools:visibility="visible" />
 
     <!-- Input Container -->
     <LinearLayout
         android:id="@+id/inputContainer"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/white"
         android:elevation="4dp"
         android:orientation="horizontal"
-        android:padding="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        android:padding="8dp">
 
         <!-- Message Input -->
         <EditText
@@ -79,7 +138,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/scan_barcode"
             android:padding="8dp"
-            android:src="@android:drawable/ic_menu_camera"
+            android:src="@drawable/ic_barcode_scan"
             android:tint="@color/purple_500" />
 
         <!-- Send Button -->
@@ -96,4 +155,5 @@
 
     </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>
+

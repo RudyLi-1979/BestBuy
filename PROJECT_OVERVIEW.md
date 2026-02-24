@@ -24,6 +24,8 @@ An intelligent shopping assistant Android application that combines barcode scan
 - **Quantity Management**: Add, update, remove items
 - **Price Calculation**: Real-time total with quantity adjustments
 - **Product Details**: Tap to view full information
+- **Toolbar Badge**: Cart icon with live item count + total amount in ChatActivity Toolbar
+- **Always-Visible Summary**: Bottom bar always shows item count and total (shows 0 / $0.00 when empty)
 
 ### 4. Personalized Recommendations
 - **Behavior Tracking**: Automatically tracks views, scans, and cart additions
@@ -41,6 +43,12 @@ An intelligent shopping assistant Android application that combines barcode scan
 - **Specification Matching**: Intelligent filtering by storage, color, model
 - **Relevance Scoring**: AI-powered result ranking
 
+### 7. Chat History Persistence
+- **Local-First History**: Chat messages (including product cards) stored to Room DB locally
+- **Product Card Preservation**: Product cards survive app restart — serialized as JSON with Gson and stored in `ChatMessageEntity.productsJson`
+- **Session-Scoped**: Messages grouped by `sessionId`, independently queryable and clearable
+- **Offline History**: History loaded from local DB without requiring a server round-trip
+
 ---
 
 ## System Architecture
@@ -48,28 +56,28 @@ An intelligent shopping assistant Android application that combines barcode scan
 ### Three-Tier Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Android App (Client)                     │
-│                    - Kotlin MVVM Pattern                     │
-│                    - CameraX + ML Kit                        │
-│                    - Room Database                           │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ HTTPS (REST API)
-                           │ Port: 58000
-┌──────────────────────────▼──────────────────────────────────┐
-│                   UCP Server (Middleware)                    │
-│                 - Python FastAPI Framework                   │
-│                 - Gemini 2.5 Flash Integration               │
-│                 - Docker Containerized                       │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ HTTPS (REST API)
-                           │ Rate Limit: 5 req/s
-┌──────────────────────────▼──────────────────────────────────┐
-│                Best Buy Developer API (Service)              │
-│                 - Product Information                        │
-│                 - Store Inventory                            │
-│                 - Recommendations                            │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────┐
+│   Android App (Client)            │
+│  - Kotlin MVVM Pattern            │
+│  - CameraX + ML Kit               │
+│  - Room Database                  │
+└──────────┬────────────────────────┘
+           │ HTTPS (REST API)
+           │ Port: 58000
+┌──────────▼────────────────────────┐
+│   UCP Server (Middleware)         │
+│ - Python FastAPI Framework        │
+│ - Gemini 2.5 Flash Integration    │
+│ - Docker Containerized            │
+└──────────┬────────────────────────┘
+           │ HTTPS (REST API)
+           │ Rate Limit: 5 req/s
+┌──────────▼────────────────────────┐
+│  Best Buy Developer API (Service) │
+│ - Product Information             │
+│ - Store Inventory                 │
+│ - Recommendations                 │
+└───────────────────────────────────┘
 ```
 
 ---
@@ -154,7 +162,7 @@ Gemini generates natural language response
 | Camera | CameraX 1.3.1 |
 | Barcode | ML Kit 17.2.0 |
 | Networking | Retrofit 2.9.0 + OkHttp 4.12.0 |
-| Database | Room Database v2 |
+| Database | Room Database v3 |
 | Async | Coroutines 1.7.3 + Flow |
 | Image Loading | Glide 4.16.0 |
 | UI | XML Layouts + View Binding |
@@ -410,6 +418,6 @@ Gemini API (External)
 
 ---
 
-**Last Updated**: February 13, 2026  
+**Last Updated**: February 24, 2026  
 **Version**: 1.0.0  
 **License**: Educational Use Only

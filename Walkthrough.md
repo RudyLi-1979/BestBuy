@@ -1,6 +1,6 @@
 # Walkthrough: BestBuy Scanner App Development
 
-## Latest Completion: Chat-First Architecture + UCP Server + New Features Implementation (2026-02-13)
+## Latest Completion: Chat Product Card Persistence & UI Enhancement (2026-02-24)
 
 ### Feature Overview
 Successfully restructured the application to a **Chat-First Architecture**, integrated **Gemini 2.5 Flash AI** and local **UCP Server** to provide intelligent conversational shopping experience.
@@ -390,17 +390,74 @@ cd c:\Users\rudy\AndroidStudioProjects\BestBuy
 | `build.gradle.kts` | 修改 | 新增 Room 依賴 |
 
 ---
+## Chat Product Card Persistence & UI Enhancement (2026-02-24)
 
-## 後續改進建議
+### Completed Items
 
-1. **購物車數量 Badge**: 在 Toolbar 購物車圖標上顯示商品數量
-2. **商品詳情快速查看**: 在購物車內點擊商品可查看詳情
-3. **訂單歷史**: 記錄已結帳的訂單
-4. **優惠券系統**: 支援折扣碼輸入
-5. **商品收藏**: 新增 Wishlist 功能
-6. **庫存檢查**: 整合 BestBuy API 檢查商品庫存
-7. **價格追蹤**: 記錄價格變動歷史
-8. **分享購物車**: 支援分享購物車內容
+#### 1. Chat Product Card Persistence (Bug Fix)
+**問題**: 離開 App 後再次開啟，每次查詢對話下方的 recommendation product cards 消失。
+**根本原因**: `loadHistory()` 呼叫 UCP Server `/history` API，但 server 回傳的訊息不含 `products` 欄位，導致 product cards 無法還原。
+**解決方案**: 以 Room DB 本地儲存每則訊息（含 products JSON），history 從本地 DB 讀取。
+
+**新增檔案:**
+- [`ChatMessageEntity.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/model/ChatMessageEntity.kt) — Room Entity: `id`, `sessionId`, `role`, `content`, `timestamp`, `productsJson: String?`
+- [`ChatMessageDao.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/dao/ChatMessageDao.kt) — DAO: `insert`, `getMessagesForSession`, `deleteSession`, `deleteAll`
+
+**修改檔案:**
+- [`AppDatabase.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/database/AppDatabase.kt) — 升級至 **v3**；新增 `ChatMessageEntity`、`MIGRATION_2_3`（建立 `chat_messages` 表）、`chatMessageDao()` 抽象方法
+- [`ChatRepository.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/data/repository/ChatRepository.kt) — 完全重寫：`getLocalHistory()` 從本地 DB 讀取；`sendMessage()` 傳送後呼叫 `saveMessageLocally()` 儲存 user + AI 訊息（含 products JSON，使用 Gson + TypeToken）
+- [`ChatViewModel.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/viewmodel/ChatViewModel.kt) — `loadHistory()` 改呼叫 `chatRepository.getLocalHistory()`
+
+---
+
+#### 2. UI Enhancement — Barcode Icon, Cart Toolbar Button
+**需求**: 掃描按鈕 icon 改為 barcode 圖示；右上角顯示購物車 icon + 數量 badge + 總金額。
+
+**Theme 限制**: 主題為 `Theme.Material3.DayNight.NoActionBar`，系統 ActionBar 不存在，必須在 layout 中嵌入 `Toolbar`。
+
+**新增檔案:**
+- [`ic_barcode_scan.xml`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/res/drawable/ic_barcode_scan.xml) — Vector drawable: barcode icon with corner brackets + vertical lines
+- [`ic_cart.xml`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/res/drawable/ic_cart.xml) — Material shopping cart SVG (white fill)
+- [`bg_cart_badge.xml`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/res/drawable/bg_cart_badge.xml) — Red oval Shape drawable for badge background
+
+**修改檔案:**
+- [`activity_chat.xml`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/res/layout/activity_chat.xml) — 根節點改為 `LinearLayout`；頂部加入顯式 `Toolbar`（64dp），Toolbar 內嵌 `LinearLayout` cart button（`FrameLayout` [icon + badge] + `TextView` [total]）；掃描按鈕 icon 改為 `@drawable/ic_barcode_scan`
+- [`ChatActivity.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/ChatActivity.kt) — `setSupportActionBar(toolbar)`；從 toolbar 取得 `cartBadge`、`cartTotal`；cart button `onClickListener` 開啟 `CartActivity`；新增 `CartViewModel.itemCount.observe` 與 `CartViewModel.totalPrice.observe`
+
+---
+
+#### 3. Cart Page — Always-Visible Bottom Summary Bar
+**需求**: 購物車頁底部總金額列永遠顯示（空車時顯示 0 items / $0.00）。
+
+**修改檔案:**
+- [`activity_cart.xml`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/res/layout/activity_cart.xml) — 新增 `tvItemCount` TextView；`bottomBar` 移除 `GONE` 設定，改為永遠 `VISIBLE`
+- [`CartActivity.kt`](file:///c:/Users/rudy/AndroidStudioProjects/BestBuy/app/src/main/java/com/bestbuy/scanner/ui/CartActivity.kt) — `setupObservers()` 永遠顯示 `bottomBar`；計算 `count = items.sumOf { it.quantity }` 並設定 `tvItemCount`（0 / 1 / N items）
+
+---
+
+### 技術亮點
+- **Room DB v3 Migration**: 平滑升級 v2→v3，無資料遺失
+- **Gson TypeToken 序列化**: `List<Product>` ↔ JSON string，完整保留 product card 資料
+- **Local-First Chat History**: 離線可讀取歷史，不依賴 server
+- **Toolbar Cart Widget**: NoActionBar 主題下自訂 Toolbar，內嵌 badge + 金額
+
+### 檔案變更清單
+
+| 檔案 | 類型 | 說明 |
+|------|------|------|
+| `ChatMessageEntity.kt` | 新增 | Room Entity: 聊天訊息含 products JSON |
+| `ChatMessageDao.kt` | 新增 | Room DAO: 訊息 CRUD |
+| `ic_barcode_scan.xml` | 新增 | 掃描按鈕 barcode icon |
+| `ic_cart.xml` | 新增 | Toolbar 購物車 icon |
+| `bg_cart_badge.xml` | 新增 | Badge 紅色圓形背景 |
+| `AppDatabase.kt` | 修改 | 升級至 v3，新增 ChatMessageEntity |
+| `ChatRepository.kt` | 修改 | 本地 DB 歷史儲存與讀取 |
+| `ChatViewModel.kt` | 修改 | loadHistory() 改讀本地 DB |
+| `activity_chat.xml` | 修改 | Toolbar + cart button + barcode icon |
+| `ChatActivity.kt` | 修改 | Toolbar 設定、badge/total 更新 |
+| `activity_cart.xml` | 修改 | 新增 tvItemCount、bottomBar 永遠顯示 |
+| `CartActivity.kt` | 修改 | setupObservers 永遠顯示底部總結列 |
+
 ---
 
 ## Bug 修復與功能增強 (Bug Fixes & Enhancements)
@@ -451,7 +508,7 @@ cd c:\Users\rudy\AndroidStudioProjects\BestBuy
 
 ## 後續改進建議
 
-1. **購物車數量 Badge**: 在 Toolbar 購物車圖標上顯示商品數量
+1. ~~**購物車數量 Badge**: 在 Toolbar 購物車圖標上顯示商品數量~~ ✅ 已完成
 2. ~~**商品詳情快速查看**: 在購物車內點擊商品可查看詳情~~ ✅ 已完成
 3. **訂單歷史**: 記錄已結帳的訂單
 4. **優惠券系統**: 支援折扣碼輸入
