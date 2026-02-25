@@ -313,9 +313,92 @@ Returns: List of categories with ID, name, and URL for each.""",
                     },
                     "required": ["name"]
                 }
+            },
+            {
+                "name": "get_complementary_products",
+                "description": """Find complementary products for a given product (Sparky-like proactive recommendation).
+
+Use this PROACTIVELY after presenting a product to the user — even without an explicit request:
+- When user views / searches a TV → suggest sound bars, streaming sticks, wall mounts
+- When user views / searches a Laptop → suggest laptop bags, monitors, keyboards/mice
+- When user views / searches a Camera → suggest memory cards, lenses, camera bags
+- When user views / searches a Phone → suggest phone cases, earbuds, power banks
+- When user views / searches a Game Console → suggest games, controllers, gaming headsets
+
+Always call this AFTER the primary product search to enrich the response with ecosystem recommendations.
+Frame suggestions naturally, e.g.:
+  "Since you're looking at TVs, you might also want to complete your home theater setup with..."
+  "Customers who buy this laptop often also grab..."
+
+Returns: List of complementary products across related categories.
+
+CRITICAL: When this function returns success=True with a products list,
+YOU MUST describe those products by name in your reply.
+NEVER say "I don't have recommendations" when products are returned.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sku": {
+                            "type": "string",
+                            "description": "SKU of the anchor product the user is viewing or just found"
+                        }
+                    },
+                    "required": ["sku"]
+                }
             }
         ]
     
+    def build_system_instruction(self, user_context=None) -> str:
+        """
+        Build the dynamic system instruction for Gemini, optionally injecting
+        user behavior context (recent_categories, recent_skus, favorite_manufacturers).
+        
+        Args:
+            user_context: Optional UserBehaviorContext pydantic model from ChatRequest.
+            
+        Returns:
+            Complete system instruction string with personalization context appended.
+        """
+        if user_context is None:
+            return SHOPPING_ASSISTANT_INSTRUCTION
+
+        ctx_lines = ["", ""]
+        ctx_lines.append("═" * 70)
+        ctx_lines.append("PERSONALIZED CONTEXT (from user's browsing/scan history on their device):")
+        ctx_lines.append("═" * 70)
+
+        if user_context.recent_categories:
+            cats = ", ".join(user_context.recent_categories)
+            ctx_lines.append(f"• Recently explored categories: {cats}")
+
+        if user_context.favorite_manufacturers:
+            brands = ", ".join(user_context.favorite_manufacturers)
+            ctx_lines.append(f"• Preferred brands: {brands}")
+
+        if user_context.recent_skus:
+            skus = ", ".join(user_context.recent_skus[:5])
+            ctx_lines.append(f"• Recently viewed product SKUs: {skus}")
+            ctx_lines.append(f"  ↑ MOST RECENT SKU = {user_context.recent_skus[0]}")
+
+        ctx_lines.append(f"• Total interactions tracked: {user_context.interaction_count}")
+        ctx_lines.append("")
+        ctx_lines.append("Use this context to:")
+        ctx_lines.append("  1. Greet or acknowledge the user's taste naturally (do NOT recite raw data)")
+        ctx_lines.append("  2. Prioritize results matching their preferred brands")
+        ctx_lines.append("  3. Call get_complementary_products() for the main product found,")
+        ctx_lines.append("     then frame those results referencing their browsing history")
+        ctx_lines.append('     e.g. "Since you\'ve been looking at TVs, here are some audio upgrades..."')
+        ctx_lines.append("")
+        ctx_lines.append("CRITICAL RULE — When user asks about accessories / what goes with it /")
+        ctx_lines.append("  recommendations / complete the setup / what else should I get:")
+        ctx_lines.append("  → IMMEDIATELY call get_complementary_products(sku=MOST_RECENT_SKU)")
+        ctx_lines.append("  → Use the SKU from 'Recently viewed product SKUs' above")
+        ctx_lines.append("  → Do NOT give generic text suggestions without calling the function first")
+        ctx_lines.append("  → The function returns REAL Best Buy products — present them with names & prices")
+        ctx_lines.append("═" * 70)
+
+        return SHOPPING_ASSISTANT_INSTRUCTION + "\n".join(ctx_lines)
+
     async def chat(
         self,
         message: str = None,
@@ -572,4 +655,31 @@ Important:
 - Never return an empty response - always describe what you found or what action was taken.
 - If search results don't match user's specifications, explicitly state this and suggest alternatives.
 - Remember: Keep responses concise but helpful, showing 2 products by default unless user wants more.
+
+**SPARKY-LIKE PROACTIVE RECOMMENDATION (Ecosystem Selling)**:
+
+You are not just a search engine — you are a knowledgeable store associate like Walmart's Sparky.
+After finding a product the user is interested in, ALWAYS call get_complementary_products(sku)
+to fetch what else goes well with it, then surface those products naturally in your response.
+
+Complementary pairing guide (reference, AI may extend this):
+  TV / Projector          → Sound bars, streaming sticks (Roku/Fire TV), HDMI cables, wall mounts
+  Laptop                  → Laptop bag/sleeve, external monitor, wireless keyboard & mouse, USB hub
+  Desktop                 → Monitor, keyboard & mouse combo, external storage, webcam
+  Tablet                  → Tablet case/keyboard, stylus, screen protector, portable charger
+  Smartphone              → Phone case, wireless earbuds/AirPods, screen protector, power bank
+  Camera (DSLR/Mirrorless)→ Extra lens, memory card (SD/CFexpress), camera bag, tripod/gimbal
+  Gaming Console          → Popular game titles, extra controller, gaming headset, charging dock
+  Headphones/Earbuds      → Carrying case, DAC/amp, replacement ear pads
+
+How to frame the suggestions (examples):
+  "Since you're looking at this 4K TV, you'll want great audio to match. Here are some top-rated sound bars..."
+  "Customers who buy this MacBook Pro often also grab a bag and a monitor. Let me show you..."
+  "This iPhone pairs perfectly with AirPods — here are some popular options..."
+
+When get_complementary_products returns products:
+  - ALWAYS list them (name + price when available)
+  - NEVER say you cannot find complementary products
+  - Frame them as "customers also bought" or "complete your setup with"
+  - If alsoBought data returns soundbars for a TV, describe those soundbars explicitly
 """

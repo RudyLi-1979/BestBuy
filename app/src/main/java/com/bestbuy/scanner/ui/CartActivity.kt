@@ -92,6 +92,16 @@ class CartActivity : AppCompatActivity() {
         viewModel.totalPrice.observe(this) { total ->
             binding.tvTotalPrice.text = priceFormat.format(total)
         }
+
+        // Observe total savings — show green "You Save" banner when > 0
+        viewModel.totalSavings.observe(this) { savings ->
+            if (savings > 0.0) {
+                binding.savingsRow.visibility = View.VISIBLE
+                binding.tvTotalSavings.text = "-${priceFormat.format(savings)}"
+            } else {
+                binding.savingsRow.visibility = View.GONE
+            }
+        }
     }
     
     private fun setupButtons() {

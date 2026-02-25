@@ -34,10 +34,20 @@ class ProductSimple(BaseModel):
         }
 
 
+class CategoryPathItem(BaseModel):
+    """Single level in the Best Buy product category hierarchy (e.g. Televisions)."""
+    id: Optional[str] = None
+    name: Optional[str] = None
+
+    class Config:
+        populate_by_name = True
+
+
 class Product(BaseModel):
     """
     Product model matching Best Buy API response
     Based on Android App's Product data class
+
     """
     sku: Optional[int] = None
     name: Optional[str] = None
@@ -60,6 +70,7 @@ class Product(BaseModel):
     free_shipping: Optional[bool] = Field(None, alias="freeShipping")
     in_store_availability: Optional[bool] = Field(None, alias="inStoreAvailability")
     online_availability: Optional[bool] = Field(None, alias="onlineAvailability")
+    category_path: Optional[List[CategoryPathItem]] = Field(None, alias="categoryPath")
     
     class Config:
         populate_by_name = True  # Allow both alias and field name

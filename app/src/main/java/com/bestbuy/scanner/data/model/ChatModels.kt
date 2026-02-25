@@ -36,6 +36,29 @@ data class FunctionCall(
 )
 
 /**
+ * User behavior context for Sparky-like personalized recommendations.
+ * Collected from the device's Room DB (UserInteraction table) and sent
+ * with every chat request so Gemini can tailor its suggestions.
+ */
+data class UserBehaviorContext(
+    /** Top product categories user has been browsing (e.g. ["Televisions", "Laptops"]) */
+    @SerializedName("recent_categories")
+    val recentCategories: List<String> = emptyList(),
+
+    /** SKUs of products the user recently viewed or scanned (last 5) */
+    @SerializedName("recent_skus")
+    val recentSkus: List<String> = emptyList(),
+
+    /** Brands the user favours based on interaction frequency (top 2) */
+    @SerializedName("favorite_manufacturers")
+    val favoriteManufacturers: List<String> = emptyList(),
+
+    /** Total number of interactions tracked in Room DB */
+    @SerializedName("interaction_count")
+    val interactionCount: Int = 0
+)
+
+/**
  * Chat request to UCP Server
  */
 data class ChatRequest(
@@ -46,7 +69,11 @@ data class ChatRequest(
     val sessionId: String? = null,
     
     @SerializedName("user_id")
-    val userId: String? = null
+    val userId: String? = null,
+
+    /** Optionally included for personalized recommendations (may be null for new users) */
+    @SerializedName("user_context")
+    val userContext: UserBehaviorContext? = null
 )
 
 /**

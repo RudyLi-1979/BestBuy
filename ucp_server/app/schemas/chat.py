@@ -20,16 +20,50 @@ class ChatMessage(BaseModel):
         }
 
 
+class UserBehaviorContext(BaseModel):
+    """
+    User behavior context for personalized recommendations (Sparky-like).
+    Collected from the Android app's local Room DB (UserInteraction table)
+    and sent with every chat request to enable context-aware AI suggestions.
+    """
+    recent_categories: List[str] = Field(
+        default_factory=list,
+        description="Product categories the user has been exploring (e.g. ['Televisions', 'Laptops'])"
+    )
+    recent_skus: List[str] = Field(
+        default_factory=list,
+        description="SKUs of products the user has recently viewed or scanned"
+    )
+    favorite_manufacturers: List[str] = Field(
+        default_factory=list,
+        description="Brands the user prefers based on browsing history (e.g. ['Samsung', 'Apple'])"
+    )
+    interaction_count: int = Field(
+        0,
+        description="Total number of user interactions tracked"
+    )
+
+
 class ChatRequest(BaseModel):
     """Chat request from user"""
     message: str = Field(..., description="User's message")
     session_id: Optional[str] = Field(None, description="Session ID for conversation continuity")
+    user_context: Optional[UserBehaviorContext] = Field(
+        None,
+        description="User behavior context for personalized recommendations"
+    )
     
     class Config:
         json_schema_extra = {
             "example": {
                 "message": "I want to buy an iPhone 15 Pro",
-                "session_id": "abc123"
+                "session_id": "abc123",
+                "user_context": {
+                    "recent_categories": ["Televisions", "Home Theater"],
+                    "recent_skus": ["6537851", "7625672"],
+                    "favorite_manufacturers": ["Samsung", "Sony"],
+                    "interaction_count": 12
+                }
             }
         }
 

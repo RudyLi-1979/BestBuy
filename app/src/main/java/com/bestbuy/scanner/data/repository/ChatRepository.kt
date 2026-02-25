@@ -31,6 +31,11 @@ class ChatRepository(context: Context) {
     private val chatMessageDao = AppDatabase.getDatabase(context).chatMessageDao()
     private val gson = Gson()
 
+    // ── Behaviour tracking for Sparky-like recommendations ─────────────────
+    private val userBehaviorRepository = UserBehaviorRepository(
+        AppDatabase.getDatabase(context).userInteractionDao()
+    )
+
     companion object {
         private const val TAG = "ChatRepository"
         private const val KEY_SESSION_ID = "session_id"
@@ -116,14 +121,35 @@ class ChatRepository(context: Context) {
     /**
      * Send a message to the AI assistant.
      * Both the user message and the AI response (with products) are saved locally.
+     * User behavior context (browsing/scan history) is gathered from Room and
+     * included in the request for Sparky-like personalized recommendations.
      */
     suspend fun sendMessage(message: String): Result<ChatResponse> = withContext(Dispatchers.IO) {
         try {
             val sessionId = getSessionId()
+
+            // Gather behavior context for personalization (may be null for new users)
+            val behaviorContext = try {
+                userBehaviorRepository.getBehaviorSummary()
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not gather behavior context: ${e.message}")
+                null
+            }
+
+            if (behaviorContext != null) {
+                Log.d(TAG, "==============================================")
+                Log.d(TAG, "🧠 User behavior context attached to request")
+                Log.d(TAG, "Categories : ${behaviorContext.recentCategories}")
+                Log.d(TAG, "Brands     : ${behaviorContext.favoriteManufacturers}")
+                Log.d(TAG, "Interactions: ${behaviorContext.interactionCount}")
+                Log.d(TAG, "==============================================")
+            }
+
             val request = ChatRequest(
                 message = message,
                 sessionId = sessionId,
-                userId = getUserId()
+                userId = getUserId(),
+                userContext = behaviorContext
             )
 
             Log.d(TAG, "Sending message: $message")

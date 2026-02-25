@@ -34,6 +34,111 @@ COMMON_CATEGORIES = {
     "mac_studio": "abcat0501000",  # Mac Studio is a desktop computer
 }
 
+# ── Sparky-like complementary category map ────────────────────────────────────
+# Maps a product's Browse category ID to complementary search queries.
+# Used by get_complementary_products() when alsoBought returns no results.
+# search_products() is reliable and does NOT hit mostViewed quota limits.
+CATEGORY_COMPLEMENT_MAP: Dict[str, List[str]] = {
+    # TVs → Sound Bars / Speakers, Streaming Devices, TV Accessories (mounts, cables)
+    "abcat0101000": ["abcat0204000", "pcmcat241600050001", "abcat0107000"],
+    # Home Theater Projectors → Screens, Audio, Streaming
+    "abcat0102000": ["abcat0204000", "pcmcat241600050001"],
+    # Laptops → Laptop Accessories (bags/sleeves), External Monitors, Storage
+    "abcat0502000": ["pcmcat209000050006", "abcat0513000", "abcat0504000"],
+    # Desktops → Monitors, Keyboards & Mice, Storage
+    "abcat0501000": ["abcat0513000", "pcmcat128500050004", "abcat0504000"],
+    # Tablets → Tablet Cases & Accessories, Keyboards, Styluses
+    "abcat0503000": ["pcmcat312100050015", "pcmcat209000050006", "abcat0504000"],
+    # Cell Phones → Phone Cases & Accessories, Headphones, Chargers/Power Banks
+    "abcat0800000": ["pcmcat312100050015", "abcat0204000", "pcmcat209000050006"],
+    # Headphones / Earbuds → Carrying Cases, DACs & Amps, Cables
+    "abcat0204000": ["pcmcat209000050006", "pcmcat241600050001"],
+    # Cameras (Digital Cameras) → Lenses, Memory Cards, Camera Bags
+    "abcat0400000": ["pcmcat232400050000", "abcat0504000", "pcmcat241600050001"],
+    # DSLR Cameras → Lenses, Memory Cards, Flashes
+    "abcat0401000": ["pcmcat232400050000", "abcat0504000"],
+    # Gaming Consoles → Games, Controllers, Gaming Headsets
+    "abcat0700000": ["abcat0702000", "abcat0707000", "abcat0204000"],
+    # Printers → Ink & Toner, Paper, Printer Accessories
+    "abcat0301000": ["pcmcat128500050004", "pcmcat241600050001"],
+}
+
+# ── Category name → fallback search queries (quota-safe) ─────────────────────
+# Keys are lowercase category/product type names as seen in Room DB category strings.
+# Used when alsoBought returns 0 results — ONE targeted search_products call.
+CATEGORY_NAME_TO_QUERIES: Dict[str, str] = {
+    # TVs / Displays
+    "televisions":            "soundbar speaker",
+    "tv":                     "soundbar speaker",
+    "television":             "soundbar speaker",
+    "oled":                   "soundbar speaker",
+    "qled":                   "soundbar speaker",
+    "4k tv":                  "soundbar speaker",
+    "monitors":               "monitor stand webcam",
+    "monitor":                "monitor stand webcam",
+    "projectors":             "soundbar projector screen",
+    # Computers
+    "laptops":                "laptop bag USB hub",
+    "laptop":                 "laptop bag USB hub",
+    "notebooks":              "laptop bag external monitor",
+    "macbooks":               "laptop bag USB hub",
+    "desktops":               "monitor keyboard mouse",
+    "desktop":                "monitor keyboard mouse",
+    "tablets":                "tablet case keyboard",
+    "tablet":                 "tablet case keyboard",
+    "ipads":                  "iPad case keyboard",
+    # Mobile
+    "cell phones":            "phone case wireless earbuds",
+    "cell phone":             "phone case wireless earbuds",
+    "smartphones":            "phone case wireless earbuds",
+    "iphones":                "iPhone case wireless earbuds",
+    # Audio
+    "headphones":             "headphone stand audio cable",
+    "headphone":              "headphone stand audio cable",
+    "earbuds":                "earbuds case wireless charger",
+    "speakers":               "speaker stand audio cable",
+    # Cameras
+    "cameras":                "camera memory card camera bag",
+    "camera":                 "camera memory card camera bag",
+    "digital cameras":        "camera memory card camera bag",
+    "dslr":                   "camera lens memory card",
+    # Gaming
+    "video games":            "gaming headset game controller",
+    "gaming":                 "gaming headset game controller",
+    "game consoles":          "gaming headset controller",
+    "playstation":            "PlayStation controller gaming headset",
+    "xbox":                   "Xbox controller gaming headset",
+    "nintendo":               "Nintendo Switch case controller",
+    # Smart Home
+    "smart home":             "smart plug smart bulb hub",
+    "networking":             "WiFi extender Ethernet switch",
+    # Printers
+    "printers":               "printer ink cartridge paper",
+    "printer":                "printer ink cartridge paper",
+}
+
+def _get_complement_query(category_hints: list, manufacturer_hint: str = None) -> str:
+    """
+    Derive a single targeted search query from category/manufacturer hints — NO API call needed.
+    Returns the first match found in CATEGORY_NAME_TO_QUERIES.
+    Manufacturer hint is NOT appended to avoid pulling unrelated brand products.
+    """
+    for cat in category_hints:
+        key = cat.lower().strip()
+        if key in CATEGORY_NAME_TO_QUERIES:
+            return CATEGORY_NAME_TO_QUERIES[key]
+    # Keyword scan as last resort
+    cat_str = " ".join(category_hints).lower()
+    for keyword, query in [
+        ("tv", "soundbar speaker"), ("television", "soundbar speaker"),
+        ("laptop", "laptop bag USB hub"), ("phone", "phone case wireless earbuds"),
+        ("camera", "camera memory card camera bag"), ("game", "gaming headset controller"),
+        ("tablet", "tablet case keyboard"),
+    ]:
+        if keyword in cat_str:
+            return query
+    return ""  # give up — no fallback query available
+
 
 class BestBuyAPIClient:
     """
@@ -46,9 +151,9 @@ class BestBuyAPIClient:
         self.api_key = settings.bestbuy_api_key
         self.client = httpx.AsyncClient(timeout=30.0)
         
-        # Initialize rate limiter (5 req/s, 50,000 req/day)
+        # Initialize rate limiter (5 req/min, 50,000 req/day — free developer tier)
         self.rate_limiter = RateLimiter(
-            requests_per_second=5,
+            requests_per_minute=5,
             requests_per_day=50000
         )
         
@@ -58,7 +163,7 @@ class BestBuyAPIClient:
         self._category_cache_initialized = False
         
         logger.info(f"Initialized Best Buy API Client with base URL: {self.base_url}")
-        logger.info("Rate limiting enabled: 5 req/s, 50,000 req/day")
+        logger.info("Rate limiting enabled: 5 req/min, 50,000 req/day")
         logger.info(f"Common category cache loaded: {len(COMMON_CATEGORIES)} categories")
     
     async def search_by_upc(self, upc: str) -> Optional[Product]:
@@ -121,7 +226,7 @@ class BestBuyAPIClient:
             url = f"{self.base_url}/v1/products/{sku}.json"
             params = {
                 "apiKey": self.api_key,
-                "show": "sku,name,regularPrice,salePrice,onSale,image,largeFrontImage,mediumImage,thumbnailImage,longDescription,shortDescription,manufacturer,modelNumber,upc,url,addToCartUrl,customerReviewAverage,customerReviewCount,freeShipping,inStoreAvailability,onlineAvailability"
+                "show": "sku,name,regularPrice,salePrice,onSale,image,largeFrontImage,mediumImage,thumbnailImage,longDescription,shortDescription,manufacturer,modelNumber,upc,url,addToCartUrl,customerReviewAverage,customerReviewCount,freeShipping,inStoreAvailability,onlineAvailability,categoryPath"
             }
             
             logger.info(f"Getting product by SKU: {sku}")
@@ -342,13 +447,27 @@ class BestBuyAPIClient:
             # FILTER: If user is searching for a device (phone, laptop, etc.), skip accessories
             # unless the query explicitly mentions accessories
             device_keywords = ['iphone', 'ipad', 'macbook', 'laptop', 'phone', 'tablet', 'watch', 'airpods']
-            accessory_keywords = ['case', 'cover', 'charger', 'cable', 'adapter', 'stand', 'mount', 'screen protector']
+            # NOTE: 'case' intentionally excluded — Apple Watch/iPhone bodies also contain "Aluminum Case"/"Titanium Case"
+            # Accessory detection is primarily handled by the is_accessory_by_pattern check below
+            accessory_keywords = ['charger', 'cable', 'adapter', 'stand', 'mount', 'screen protector']
             
             is_device_search = any(device in query_lower for device in device_keywords)
             is_accessory_product = any(accessory in product_text for accessory in accessory_keywords)
             accessory_in_query = any(accessory in query_lower for accessory in accessory_keywords)
-            
-            if is_device_search and is_accessory_product and not accessory_in_query:
+
+            # Additional check: "for <device>" pattern → accessory for the device
+            # e.g., "Sport Band for Apple Watch 44mm" when user searches "Apple Watch"
+            # Apple Watch DEVICES say "with Sport Band", not "for Apple Watch"
+            is_accessory_by_pattern = False
+            if detected_product_type and is_device_search and not accessory_in_query:
+                type_kws = product_type_keywords.get(detected_product_type, [])
+                for type_kw in type_kws:
+                    if f"for {type_kw}" in product_text:
+                        is_accessory_by_pattern = True
+                        logger.info(f"  🔍 Accessory pattern 'for {type_kw}' matched: {product.name[:70]}")
+                        break
+
+            if is_device_search and (is_accessory_product or is_accessory_by_pattern) and not accessory_in_query:
                 logger.debug(f"Product '{product.name}' is an accessory, but user searched for device, skipping")
                 continue
             
@@ -440,20 +559,24 @@ class BestBuyAPIClient:
         
         # FALLBACK: If filtering removed all products, check if we should return some results
         if not filtered_products and result.products:
-            # If MOST products (80%+) are irrelevant types, return empty
-            irrelevant_ratio = len(irrelevant_filtered) / len(result.products)
-            
+            # If MOST products (80%+) are irrelevant types, return empty (truly bad query)
+            irrelevant_count = len(irrelevant_filtered)
+            irrelevant_ratio = irrelevant_count / len(result.products)
+
             if irrelevant_ratio >= 0.8:
-                logger.warning(f"Most products ({len(irrelevant_filtered)}/{len(result.products)}, {irrelevant_ratio:.0%}) are irrelevant types. Returning empty results.")
+                logger.warning(f"Most products ({irrelevant_count}/{len(result.products)}, {irrelevant_ratio:.0%}) are irrelevant types. Returning empty results.")
                 filtered_products = []
             else:
-                # Some products are relevant but don't match query specs well
-                non_irrelevant_count = len(result.products) - len(irrelevant_filtered)
-                logger.info(f"{non_irrelevant_count} products are relevant but don't match query specifications. Returning empty to let AI suggest alternatives.")
-                filtered_products = []
-                # Some actual products were filtered too aggressively, return top results
-                logger.warning(f"Filtering removed all products, but found {len(result.products) - irrelevant_count} actual products. Returning top {max_results} results as fallback")
-                filtered_products = result.products[:max_results]
+                # Scoring filtered everything — return top scored products as fallback
+                non_irrelevant_count = len(result.products) - irrelevant_count
+                if scored_products:
+                    logger.warning(f"Score filter removed all {non_irrelevant_count} relevant products. Returning top {max_results} as fallback.")
+                    # Re-sort (already sorted) and return top results ignoring score threshold
+                    scored_products.sort(key=lambda x: x[0], reverse=True)
+                    filtered_products = [p for _, p in scored_products[:max_results]]
+                else:
+                    logger.info(f"{non_irrelevant_count} products were relevant but all filtered pre-scoring. Returning empty.")
+                    filtered_products = []
         
         # Calculate pagination info
         total_filtered = len(filtered_products)
@@ -998,7 +1121,77 @@ class BestBuyAPIClient:
         except Exception as e:
             logger.error(f"Error searching categories: {e}")
             return CategorySearchResponse(total=0, categories=[], from_=1, to=0, current_page=1, total_pages=0)
-    
+
+    async def get_complementary_products(
+        self,
+        sku: str,
+        category_hints: list = None,
+        manufacturer_hint: str = None,
+    ) -> List[Product]:
+        """
+        Sparky-like: Return products that complement the given SKU.
+
+        API call budget: MAX 2 calls (critical for 5 req/min quota).
+          Call 1 — alsoBought(sku): Best Buy's "bought together" signal.
+                   If ≥ 3 results → return immediately (only 1 call used).
+          Call 2 — search_products(targeted query): fired ONLY when alsoBought
+                   returns < 3 results. Query derived from category_hints
+                   (passed from user's Room DB history — NO extra get_product_by_sku call).
+
+        Args:
+            sku:               SKU of the anchor product.
+            category_hints:    List of category names from user_context.recent_categories
+                               (e.g. ["Televisions", "Home Theater"]).
+            manufacturer_hint: Preferred brand from user_context.favorite_manufacturers[0].
+
+        Returns:
+            List of ≤ 6 complementary products; empty list on error or zero results.
+        """
+        try:
+            seen_skus = {str(sku)}
+            results: List[Product] = []
+
+            # ── Call 1: alsoBought ──────────────────────────────────────────────
+            also_bought = await self.get_also_bought(sku)
+            for p in also_bought:
+                p_sku = str(p.sku)
+                if p_sku not in seen_skus:
+                    seen_skus.add(p_sku)
+                    results.append(p)
+            logger.info(f"alsoBought({sku}) → {len(results)} product(s)")
+
+            if len(results) >= 3:
+                # Good enough — save Call 2 for other API needs
+                return results[:6]
+
+            # ── Call 2: targeted search (only when alsoBought gives < 3) ───────
+            if category_hints:
+                fallback_query = _get_complement_query(category_hints, manufacturer_hint)
+            else:
+                fallback_query = ""
+
+            if fallback_query:
+                logger.info(f"alsoBought insufficient ({len(results)}); searching '{fallback_query}'")
+                try:
+                    search_result = await self.search_products(fallback_query, page_size=6)
+                    for p in search_result.products:
+                        p_sku = str(p.sku)
+                        if p_sku not in seen_skus:
+                            seen_skus.add(p_sku)
+                            results.append(p)
+                    logger.info(f"search_products('{fallback_query}') → {len(search_result.products)} additional")
+                except Exception as e:
+                    logger.warning(f"search_products('{fallback_query}') failed: {e}")
+            else:
+                logger.info(f"No category_hints provided and alsoBought returned {len(results)} — returning as-is")
+
+            logger.info(f"get_complementary_products({sku}): returning {len(results)} product(s) total")
+            return results[:6]
+
+        except Exception as e:
+            logger.error(f"Error in get_complementary_products for SKU {sku}: {e}")
+            return []
+
     async def close(self):
         """Close HTTP client"""
         await self.client.aclose()

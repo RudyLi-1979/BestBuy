@@ -2,62 +2,49 @@
 
 ## Executive Summary
 
-The ucp_server has currently **integrated the basic functions** of the Best Buy Developer API (approximately 30% complete), including product search, UPC/SKU lookup, and simple recommendations. However, **many advanced features are not yet implemented**, such as store inventory lookup, product categories, open-box item search, and trending products.
+The ucp_server has currently **integrated the majority of high-value functions** of the Best Buy Developer API (approximately **75% complete**), including product search, UPC/SKU lookup, recommendations, store inventory (BOPIS), categories browsing, advanced search, and complementary product suggestions. Remaining gaps are primarily open-box/refurbished items and trending/most-viewed endpoints.
 
 ## Current Implementation Status
 
-### ✅ Implemented (30%)
+### ✅ Implemented (~75%)
 
 | API Category | Endpoint | Implementation Method | Status |
 |---|---|---|---|
 | Products API | `GET /v1/products(upc={upc})` | `search_by_upc()` | ✅ Complete |
 | Products API | `GET /v1/products/{sku}.json` | `get_product_by_sku()` | ✅ Complete |
 | Products API | `GET /v1/products(search={query})` | `search_products()` | ✅ Complete + Smart Filtering |
+| Products API | `GET /v1/products({filters})` | `advanced_search()` | ✅ Complete (manufacturer, price, category, shipping, sale) |
 | Recommendations | `GET /v1/products/{sku}/alsoViewed` | `get_recommendations()` | ✅ Complete |
 | Recommendations | `GET /beta/products/{sku}/similar` | `get_similar_products()` | ✅ Complete |
+| Recommendations | `GET /v1/products/{sku}/alsoBought` | `get_also_bought()` | ✅ Complete |
+| Recommendations | (internal heuristic) | `get_complementary_products()` | ✅ Complete — category-map fallback when alsoBought returns empty |
+| Stores API | `GET /v1/products/{sku}/stores` | `get_store_availability()` | ✅ Complete (BOPIS) |
+| Categories API | `GET /v1/categories` | `get_categories()` | ✅ Complete |
+| Categories API | `GET /v1/categories(name={name})` | `search_categories()` | ✅ Complete |
 
-### ❌ Unimplemented but Important (70%)
+### ❌ Unimplemented (~25%)
 
-#### 1. Recommendations API - Advanced Endpoints
-
-| Endpoint | Purpose | Business Value |
-|---|---|---|
-| `/v1/products/{sku}/alsoBought` | Frequently bought together | 🔥 High - Cross-selling |
-| `/v1/products/{sku}/viewedUltimatelyBought` | Viewed then ultimately bought | 🔥 High - Conversion rate optimization |
-| `/v1/products/trendingViewed(categoryId={id})` | Trending viewed products (by category) | 🔥 High - Attracts traffic |
-| `/v1/products/mostViewed(categoryId={id})` | Most viewed products (by category) | 🔥 High - Popular trends |
-
-**Impact**: Unable to provide data-driven cross-selling recommendations, missing opportunities to increase average order value.
-
-#### 2. Stores API - Store-related Features
+#### 1. Recommendations API - Remaining Endpoints
 
 | Endpoint | Purpose | Business Value |
 |---|---|---|
-| `/v1/stores?area(postalCode,distance)` | Find nearby stores | 🔥 High - Drive offline traffic |
-| `/v1/products/{sku}/stores?postalCode={zip}` | Store inventory lookup | 🔥 Extremely High - Real-time inventory |
-| `/v1/stores/{id}?show=services,hours` | Store services and hours | Medium - Customer experience |
+| `/v1/products/{sku}/viewedUltimatelyBought` | Viewed then ultimately bought | Medium - Conversion optimization |
+| `/v1/products/trendingViewed(categoryId={id})` | Trending viewed products (by category) | Medium - Discovery |
+| `/v1/products/mostViewed(categoryId={id})` | Most viewed products (by category) | Medium - Popular trends |
 
-**Impact**: 
-- Users cannot know if a nearby store has an item in stock.
-- Cannot support "Buy Online, Pickup In Store" (BOPIS) functionality.
-- Missed O2O (Online to Offline) business opportunities.
+> **Note**: `alsoBought` is implemented. `get_complementary_products()` fills the gap for alsoBought empty responses using a local category-map heuristic.
 
-**Example Use Case**:
-```
-User: "Where can I buy an iPhone 15 Pro 256GB nearby?"
-Current System: ❌ Can only provide the online price and link.
-Improved System: ✅ "The Richfield store (5.2 miles away) has it in stock for immediate pickup."
-```
+#### 2. Stores API - Partial
 
-#### 3. Categories API - Category Browsing
-
-| Endpoint | Purpose | Business Value |
+| Endpoint | Purpose | Status |
 |---|---|---|
-| `/v1/categories` | All product categories | Medium - Navigation experience |
-| `/v1/categories(name={name})` | Search categories | Medium - Search assistance |
-| `/v1/products(categoryPath.id={id})` | Filter products by category | 🔥 High - Precise recommendations |
+| `/v1/products/{sku}/stores?postalCode={zip}` | Store inventory lookup (BOPIS) | ✅ Implemented |
+| `/v1/stores?area(postalCode,distance)` | Find nearby stores (store list only) | ❌ Not implemented |
+| `/v1/stores/{id}?show=services,hours` | Store services and hours | ❌ Not implemented |
 
-**Impact**: Cannot implement a "browse-based shopping" experience; relies solely on keyword search.
+#### 3. Categories API - Implemented ✅
+
+All high-priority category endpoints are now implemented via `get_categories()` and `search_categories()`. The common-category lookup table (`COMMON_CATEGORIES` dict in `bestbuy_client.py`) avoids round-trips for frequently used category IDs.
 
 #### 4. Open Box API - Open-Box Deals
 
@@ -261,67 +248,48 @@ async def get_product_by_sku(self, sku: str, show: str = SHOW_DETAILED):
 
 ## Priority Recommendations
 
-### 🔥 High Priority (Implement Immediately)
+### ✅ Already Completed (as of 2026-02)
 
-1. **Store Inventory Query** (`/products/{sku}/stores`)  
-   - **Reason**: Core O2O functionality, significantly improves user experience
-   - **Effort**: 2-4 hours
-   - **Impact**: Major business value
+- **Store Inventory / BOPIS** — `get_store_availability()` ✅
+- **Also Bought** — `get_also_bought()` ✅
+- **Advanced Search** — `advanced_search()` ✅
+- **Categories API** — `get_categories()` / `search_categories()` ✅
+- **Complementary Products** — `get_complementary_products()` ✅ (category-map heuristic)
 
-2. **Also Bought** (`/products/{sku}/alsoBought`)  
-   - **Reason**: Increases cross-selling opportunities
-   - **Effort**: 1-2 hours
-   - **Impact**: Directly affects order value
+### ⚡ Remaining Priorities
 
-3. **Advanced Search Operators**  
-   - **Reason**: Improves search accuracy
-   - **Effort**: 4-6 hours
-   - **Impact**: Significantly improves user experience
+1. **Open Box API** (`/beta/products/{sku}/openBox`)  
+   - Attracts price-sensitive customers; effort ~3-4 h
 
-### ⚡ Medium Priority (Short-term Planning)
+2. **Trending/Most-Viewed** (`/products/trendingViewed`, `/products/mostViewed`)  
+   - Discovery surface; blocked by quota risk on mostViewed — use cursorMark carefully
 
-4. **Trending/Popular Products** (`/products/trendingViewed`, `/products/mostViewed`)  
-   - **Reason**: Guides users to discover new products
-   - **Effort**: 2-3 hours
+3. **Nearby Stores List** (`/v1/stores?area(postalCode,distance)`)  
+   - Store list endpoint separate from BOPIS inventory check
 
-5. **Categories API**  
-   - **Reason**: Supports category browsing
-   - **Effort**: 3-5 hours
+4. **Cursor Marks Pagination**  
+   - Required for result sets > 10 pages; use `cursorMark=*` approach
 
-6. **Facets Aggregation**  
-   - **Reason**: Implement filter UI
-   - **Effort**: 4-6 hours
-
-### 🌟 Medium-Low Priority (Long-term Optimization)
-
-7. **Open Box API**  
-   - **Reason**: Attracts price-sensitive customers
-   - **Effort**: 3-4 hours
-
-8. **Cursor Marks Pagination**  
-   - **Reason**: Optimize handling of large result sets
-   - **Effort**: 2-3 hours
-
-9. **Expand Product Attributes**  
-   - **Reason**: Richer product information
-   - **Effort**: 1-2 hours
+5. **Facets Aggregation** (`?facet=manufacturer,10`)  
+   - Enables filter-sidebar UI
 
 ## Implementation Roadmap
 
-### Phase 1: Core Feature Enhancement (1-2 weeks)
-- [ ] Implement store inventory query
-- [ ] Implement `alsoBought` recommendations
-- [ ] Implement advanced search operators (AND/OR/IN)
+### Phase 1: ✅ Completed
+- [x] Store inventory query (BOPIS)
+- [x] `alsoBought` recommendations + complementary fallback
+- [x] Advanced search operators
+- [x] Categories API
 
-### Phase 2: Discovery Features (1 week)
-- [ ] Implement trending products endpoints
-- [ ] Implement Categories API
-- [ ] Implement Facets aggregation
-
-### Phase 3: Optimization and Expansion (1 week)
+### Phase 2: Next Up
 - [ ] Open Box API
-- [ ] Cursor Marks pagination
-- [ ] Expand product attributes
+- [ ] Trending / most-viewed endpoints (quota-safe)
+- [ ] Nearby Stores list endpoint
+
+### Phase 3: Optimization
+- [ ] Cursor Marks pagination for large result sets
+- [ ] Facets aggregation
+- [ ] Expand product `show` attributes (features.feature, warrantyLabor, dimensions)
 
 ## Technical Debt
 
@@ -332,14 +300,14 @@ async def get_product_by_sku(self, sku: str, show: str = SHOW_DETAILED):
 
 ## Conclusion
 
-The ucp_server's current Best Buy API integration **only completes 30% of the official functionality**. While basic search and recommendations have been implemented, many high-value features are missing:
+The ucp_server's Best Buy API integration has reached **~75% of the official functionality**. All originally-identified high-priority gaps have been closed:
 
-- ❌ Cannot query store inventory (Lost O2O opportunities)
-- ❌ Incomplete recommendation features (Missed cross-selling)
-- ❌ Search functionality too simple (Poor user experience)
-- ❌ Cannot display refurbished deals (Missed price-sensitive customers)
+- ✅ Store inventory (BOPIS) — `get_store_availability()`
+- ✅ Cross-sell recommendations — `get_also_bought()` + `get_complementary_products()`
+- ✅ Advanced multi-criteria search — `advanced_search()`
+- ✅ Category browsing — `get_categories()` / `search_categories()`
 
-It is recommended to prioritize implementing **store inventory query** and **advanced search** functionality, which can significantly improve system competitiveness within 1-2 weeks.
+Remaining gaps are lower-priority (open-box, trending, store-list), which can be addressed incrementally. The rate limiter (`RateLimiter` in `rate_limiter.py`) prevents quota exhaustion automatically.
 
 ## References
 

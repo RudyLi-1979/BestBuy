@@ -1,6 +1,8 @@
 package com.bestbuy.scanner.ui.adapter
 
+import android.graphics.Paint
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -44,18 +46,37 @@ class CartAdapter(
             binding.apply {
                 // Product name
                 tvProductName.text = item.name
-                
-                // Price per unit
+
                 val priceFormat = NumberFormat.getCurrencyInstance(Locale.US)
-                tvPrice.text = priceFormat.format(item.price)
-                
+
+                // ============================================================
+                // On Sale: show badge, strikethrough original price, sale price
+                // ============================================================
+                if (item.onSale && item.regularPrice > item.price) {
+                    // Show red "ON SALE" badge
+                    tvOnSaleBadge.visibility = View.VISIBLE
+
+                    // Show original price with strikethrough
+                    tvOriginalPrice.visibility = View.VISIBLE
+                    tvOriginalPrice.text = priceFormat.format(item.regularPrice)
+                    tvOriginalPrice.paintFlags =
+                        tvOriginalPrice.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+
+                    // Sale price in primary blue
+                    tvPrice.text = priceFormat.format(item.price)
+                } else {
+                    tvOnSaleBadge.visibility = View.GONE
+                    tvOriginalPrice.visibility = View.GONE
+                    tvPrice.text = priceFormat.format(item.price)
+                }
+
                 // Quantity
                 tvQuantity.text = item.quantity.toString()
-                
+
                 // Subtotal
                 val subtotal = item.price * item.quantity
                 tvSubtotal.text = "Subtotal: ${priceFormat.format(subtotal)}"
-                
+
                 // Product image
                 if (!item.imageUrl.isNullOrEmpty()) {
                     Glide.with(ivProductImage.context)
@@ -64,21 +85,21 @@ class CartAdapter(
                 } else {
                     ivProductImage.setImageResource(android.R.drawable.ic_menu_gallery)
                 }
-                
+
                 // Quantity controls
                 btnIncrease.setOnClickListener {
                     onQuantityChanged(item, item.quantity + 1)
                 }
-                
+
                 btnDecrease.setOnClickListener {
                     onQuantityChanged(item, item.quantity - 1)
                 }
-                
+
                 // Remove button
                 btnRemove.setOnClickListener {
                     onRemoveClicked(item)
                 }
-                
+
                 // Item click - navigate to product details
                 root.setOnClickListener {
                     onItemClicked(item)

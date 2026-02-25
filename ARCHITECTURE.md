@@ -25,17 +25,19 @@ This project adopts a **Chat-First Architecture**, consisting of two main parts:
 │                 UCP Server                           │
 │             (Python + FastAPI)                      │
 │                                                      │
-│  /chat API                                          │
+│  Routes: /chat  /products  /cart  /checkout  /orders│
 │      ↓                                              │
 │  ChatService                                        │
 │      ↓                                              │
-│  ┌──────────────┐  ┌────────────────────────┐     │
-│  │ Gemini 2.5   │  │ BestBuyAPIClient       │     │
-│  │ Flash Client │  │ - search_products()    │     │
-│  │              │  │ - get_store_availability()│  │
-│  │ Function     │  │ - get_also_bought()    │     │
-│  │ Calling      │  │ - advanced_search()    │     │
-│  └──────────────┘  └────────────────────────┘     │
+│  ┌──────────────┐  ┌────────────────────────────┐  │
+│  │ Gemini 2.5   │  │ BestBuyAPIClient           │  │
+│  │ Flash Client │  │ - search_products()        │  │
+│  │              │  │ - get_store_availability() │  │
+│  │ Function     │  │ - get_also_bought()        │  │
+│  │ Calling      │  │ - advanced_search()        │  │
+│  └──────────────┘  │ - get_categories()         │  │
+│                    │ - get_complementary_products│ │
+│                    └────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -314,7 +316,7 @@ Glide.with(context)
 ## Future Improvement Suggestions
 
 1. ~~**Introduce Hilt/Koin**: Improve dependency injection~~ (Using Manual DI)
-2. ✅ **Use Room**: Room Database v2 implemented (shopping cart, user interactions)
+2. ✅ **Use Room**: Room Database **v4** implemented (shopping cart, user interactions, chat messages, sale price columns)
 3. **StateFlow/SharedFlow**: Replace LiveData
 4. **Jetpack Compose**: Use modern UI framework
 5. **Clean Architecture**: Further layering (Domain Layer)
@@ -336,8 +338,12 @@ Glide.with(context)
         │                     │
 ┌───────▼──────┐    ┌─────────▼────────┐
 │  API Routes  │    │   Middleware     │
-│  (/chat)     │    │   (CORS, Auth)   │
-└───────┬──────┘    └──────────────────┘
+│  /chat       │    │   (CORS, Auth)   │
+│  /products   │    └──────────────────┘
+│  /cart       │
+│  /checkout   │
+│  /orders     │
+└───────┬──────┘
         │
 ┌───────▼───────────────────────────────────────────┐
 │              ChatService                          │
@@ -345,13 +351,15 @@ Glide.with(context)
 │  - execute_function()                             │
 └───────┬───────────────────────┬───────────────────┘
         │                       │
-┌───────▼────────┐    ┌─────────▼─────────────────┐
-│ GeminiClient   │    │  BestBuyAPIClient        │
-│ - AI Dialog    │    │  - search_products()     │
-│ - Function     │    │  - get_store_availability│
-│   Calling      │    │  - get_also_bought()     │
-│                │    │  - advanced_search()     │
-└────────────────┘    └──────────────────────────┘
+┌───────▼────────┐    ┌─────────▼────────────────────┐
+│ GeminiClient   │    │  BestBuyAPIClient            │
+│ - AI Dialog    │    │  - search_products()         │
+│ - Function     │    │  - get_store_availability()  │
+│   Calling      │    │  - get_also_bought()         │
+│                │    │  - advanced_search()         │
+└────────────────┘    │  - get_categories()          │
+                      │  - get_complementary_products│
+                      └──────────────────────────────┘
 ```
 
 ### Key Components
@@ -375,9 +383,22 @@ Glide.with(context)
 - **Location**: `app/services/bestbuy_client.py`
 - **Features**:
   - Product search (UPC, keywords, advanced)
-  - Store inventory query
-  - Product recommendations (Also Viewed, Also Bought)
+  - Store inventory query (BOPIS)
+  - Product recommendations (Also Viewed, Also Bought, Complementary)
+  - Categories browsing (`get_categories`, `search_categories`)
   - Intelligent search optimization (specification filtering, relevance scoring)
+  - `COMMON_CATEGORIES` dict for zero-latency category ID lookup
+  - `CATEGORY_COMPLEMENT_MAP` for heuristic complementary product fallback
+
+#### 4. Rate Limiter
+- **Location**: `app/services/rate_limiter.py`
+- **Features**: Enforces 5 req/s against Best Buy API; prevents quota exhaustion
+
+#### 5. Additional API Routes
+- `app/api/cart.py` — server-side cart management
+- `app/api/checkout.py` — checkout session lifecycle
+- `app/api/orders.py` — order tracking
+- `app/api/products.py` — direct product endpoints
 
 ### Data Flow
 
@@ -404,7 +425,7 @@ Android App displays results
 ### Deployment Architecture
 
 ```
-Local Machine (localhost:8000)
+Local Machine (localhost:58000)  ← Docker exposes port 58000
     ↓
 Cloudflare Tunnel
     ↓

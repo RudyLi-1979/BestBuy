@@ -67,17 +67,39 @@ When other developers clone the project:
 
 ## .env File Format
 
+### Android App (project root `.env`)
 ```bash
-# Single-line comments use #
-# Format: KEY=VALUE
-
-# BestBuy API Key
-BESTBUY_API_KEY=YOUR_API_KEY
-
-# Other environment variables (if needed in the future)
-# API_BASE_URL=https://api.bestbuy.com/
-# DEBUG_MODE=true
+# BestBuy API Key — injected into BuildConfig.BESTBUY_API_KEY at Gradle build time
+BESTBUY_API_KEY=YOUR_BESTBUY_API_KEY
 ```
+
+### UCP Server (`ucp_server/.env`)
+```bash
+# Best Buy
+BESTBUY_API_KEY=YOUR_BESTBUY_API_KEY
+
+# Gemini AI
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+GEMINI_API_URL=https://generativelanguage.googleapis.com/v1beta
+
+# Server
+UCP_BASE_URL=https://ucp.rudy.xx.kg   # or http://localhost:58000 for local
+
+# Database (SQLite for dev, PostgreSQL for prod)
+DATABASE_URL=sqlite:///./ucp_bestbuy.db
+
+# Redis (required by rate limiter)
+REDIS_URL=redis://localhost:6379
+
+# Security
+SECRET_KEY=your-secret-key-min-32-chars
+
+# Development
+DEBUG=true
+LOG_LEVEL=DEBUG
+```
+
+> Copy `ucp_server/.env.example` → `ucp_server/.env` then fill in the real values.
 
 ## Frequently Asked Questions
 

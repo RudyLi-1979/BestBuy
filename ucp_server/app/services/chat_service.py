@@ -3,7 +3,7 @@ Chat Service
 Manages conversation flow and function execution
 """
 from typing import Dict, Any, List, Optional
-from app.services.gemini_client import GeminiClient, SHOPPING_ASSISTANT_INSTRUCTION
+from app.services.gemini_client import GeminiClient
 from app.services.bestbuy_client import BestBuyAPIClient
 from app.services.cart_service import CartService
 from app.services.checkout_service import CheckoutService
@@ -367,7 +367,48 @@ class ChatService:
                     "total_found": result.total,
                     "message": f"Found {result.total} categories matching '{name}'. Use the 'id' field (e.g., 'abcat0502000') in advanced_product_search for filtering."
                 }
-            
+
+            # ── Sparky-like complementary product recommendations ─────────────
+            elif function_name == "get_complementary_products":
+                sku = str(arguments.get("sku"))
+                # category_hints may be injected by proactive path or by Gemini args
+                category_hints = arguments.get("category_hints") or []
+                manufacturer_hint = arguments.get("manufacturer_hint") or None
+                logger.info(
+                    f"Getting complementary products for SKU: {sku}, "
+                    f"category_hints={category_hints}, manufacturer_hint={manufacturer_hint}"
+                )
+
+                complementary = await self.bestbuy_client.get_complementary_products(
+                    sku,
+                    category_hints=category_hints,
+                    manufacturer_hint=manufacturer_hint,
+                )
+
+                products = [
+                    {
+                        "sku": p.sku,
+                        "name": p.name,
+                        "price": p.sale_price or p.regular_price,
+                        "regular_price": p.regular_price,
+                        "on_sale": p.on_sale,
+                        "manufacturer": p.manufacturer,
+                        "image": p.image
+                    }
+                    for p in complementary[:6]  # up to 6 complementary picks
+                ]
+
+                return {
+                    "success": True,
+                    "products": products,
+                    "message": (
+                        f"✅ Found {len(products)} complementary products for SKU {sku} — "
+                        "present ALL of them to the user as ecosystem suggestions. "
+                        "Do NOT say you have no recommendations. "
+                        "List each product name and price in your response."
+                    )
+                }
+
             else:
                 return {
                     "success": False,
@@ -386,7 +427,8 @@ class ChatService:
         message: str,
         db: Session,
         user_id: str,
-        conversation_history: List[Dict[str, str]] = None
+        conversation_history: List[Dict[str, str]] = None,
+        user_context=None
     ) -> Dict[str, Any]:
         """
         Process user message with Gemini and execute functions
@@ -396,16 +438,79 @@ class ChatService:
             db: Database session
             user_id: User ID
             conversation_history: Previous conversation
+            user_context: Optional UserBehaviorContext for personalized recommendations
             
         Returns:
             Response with AI message and function results
         """
         try:
+            # Build (optionally personalized) system instruction
+            system_instruction = self.gemini_client.build_system_instruction(user_context)
+            if user_context and user_context.interaction_count > 0:
+                logger.info(
+                    f"Personalized context injected: categories={user_context.recent_categories}, "
+                    f"brands={user_context.favorite_manufacturers}, "
+                    f"interactions={user_context.interaction_count}"
+                )
+
+            # ── Proactive accessory pre-fetch ──────────────────────────────────────
+            # When user's message expresses accessory/complement intent and we have
+            # a recently-viewed SKU, execute get_complementary_products() immediately
+            # WITHOUT waiting for Gemini to decide — inject the real products into
+            # the system instruction so Gemini always describes real items.
+            proactive_products = []
+            if (
+                user_context
+                and user_context.recent_skus
+                and self._is_accessory_intent(message)
+            ):
+                anchor_sku = user_context.recent_skus[0]
+                cat_hints   = user_context.recent_categories or []
+                mfr_hint    = user_context.favorite_manufacturers[0] if user_context.favorite_manufacturers else None
+                logger.info(
+                    f"🛍️  Proactive accessory fetch: SKU={anchor_sku}, "
+                    f"categories={cat_hints}, manufacturer={mfr_hint}"
+                )
+                try:
+                    comp_result = await self.execute_function(
+                        function_name="get_complementary_products",
+                        arguments={
+                            "sku": anchor_sku,
+                            "category_hints": cat_hints,
+                            "manufacturer_hint": mfr_hint,
+                        },
+                        db=db,
+                        user_id=user_id
+                    )
+                    if comp_result.get("success") and comp_result.get("products"):
+                        proactive_products = comp_result["products"]
+                        logger.info(f"  Pre-fetched {len(proactive_products)} complementary products")
+                        # Inject product names+prices into system instruction so Gemini presents them
+                        product_lines = []
+                        for p in proactive_products[:5]:
+                            name = p.get("name", "Unknown")
+                            price = p.get("regularPrice") or p.get("salePrice") or "N/A"
+                            sku = p.get("sku", "")
+                            product_lines.append(f"  • {name} (SKU {sku}) — ${price}")
+                        injection = (
+                            f"\n\n{'═'*70}\n"
+                            f"PRE-FETCHED COMPLEMENTARY PRODUCTS (real Best Buy inventory) for SKU {anchor_sku}:\n"
+                            + "\n".join(product_lines) + "\n"
+                            f"INSTRUCTION: The user is asking about accessories. Present the above products "
+                            f"positively by name and price. Do NOT say you have no recommendations.\n"
+                            f"Do NOT call get_complementary_products again — products already loaded above.\n"
+                            f"{'═'*70}"
+                        )
+                        system_instruction += injection
+                except Exception as e:
+                    logger.warning(f"  Proactive fetch failed: {e}")
+            # ────────────────────────────────────────────────────────────────────────
+
             # Call Gemini
             gemini_response = await self.gemini_client.chat(
                 message=message,
                 conversation_history=conversation_history,
-                system_instruction=SHOPPING_ASSISTANT_INSTRUCTION
+                system_instruction=system_instruction
             )
             
             # Extract response
@@ -416,7 +521,7 @@ class ChatService:
             
             # Execute function calls
             function_results = []
-            all_products = []  # Collect all products from function results
+            all_products = list(proactive_products)  # seed with proactively fetched products
             
             for func_call in function_calls:
                 logger.info(f"Executing function: {func_call['name']} with args: {func_call['arguments']}")
@@ -443,57 +548,95 @@ class ChatService:
                     logger.info(f"Collected 1 product from {func_call['name']}: {product_data.get('name')}")
                     all_products.append(product_data)
             
-            # If there are function calls, send results back to Gemini for final response
+            # If there are function calls, enter a multi-round function calling loop
+            # Gemini may chain multiple rounds (e.g. search → get_complementary_products → final text)
             if function_calls:
                 try:
-                    logger.info(f"Executed {len(function_calls)} function(s), sending results back to Gemini")
-                    
-                    # Prepare function responses in Gemini API format
-                    gemini_function_responses = []
-                    for func_result in function_results:
-                        gemini_function_responses.append({
-                            "name": func_result["function"],
-                            "response": {"result": func_result["result"]}
-                        })
-                    
-                    logger.info(f"Formatted function responses: {gemini_function_responses}")
-                    
-                    # Ensure conversation_history is a list (handle None case)
                     if conversation_history is None:
                         conversation_history = []
-                    
-                    # Per Gemini API docs, we need to append:
-                    # 1. The user's original message
-                    # 2. The model's response with function_call (even if message is empty)
-                    # Then send the function response
+
+                    # Updated history: user message + model's initial (possibly empty) message
                     updated_history = conversation_history + [
                         {"role": "user", "content": message},
-                        {"role": "assistant", "content": ai_message or ""}  # Model's response with function call
+                        {"role": "assistant", "content": ai_message or ""}
                     ]
-                    
-                    # Send function results back to Gemini
-                    logger.info("Calling Gemini with function results...")
-                    final_response = await self.gemini_client.chat(
-                        conversation_history=updated_history,
-                        function_responses=gemini_function_responses,
-                        system_instruction=SHOPPING_ASSISTANT_INSTRUCTION
-                    )
-                    
-                    logger.info(f"Gemini final response: {final_response}")
-                    
-                    # Use the final response from Gemini
-                    ai_message = final_response.get("message", "")
-                    logger.info(f"Final AI message: '{ai_message}'")
+
+                    # We allow up to MAX_ROUNDS extra Gemini calls to resolve chained function calls
+                    MAX_ROUNDS = 3
+                    rounds = 0
+                    pending_calls = function_calls  # start with first-round calls already executed
+
+                    while pending_calls and rounds < MAX_ROUNDS:
+                        rounds += 1
+                        logger.info(f"=== Function calling round {rounds}: {len(pending_calls)} call(s) pending ===")
+
+                        # Execute pending function calls and collect results/products
+                        round_results = []
+                        for func_call in pending_calls:
+                            logger.info(f"  Executing: {func_call['name']} {func_call['arguments']}")
+                            if rounds > 1:
+                                # First round already executed above; only execute from round 2+
+                                result = await self.execute_function(
+                                    function_name=func_call["name"],
+                                    arguments=func_call["arguments"],
+                                    db=db,
+                                    user_id=user_id
+                                )
+                                function_results.append({"function": func_call["name"], "result": result})
+                                if result.get("success") and "products" in result:
+                                    all_products.extend(result["products"])
+                                    logger.info(f"  Collected {len(result['products'])} products from {func_call['name']}")
+                                elif result.get("success") and "product" in result:
+                                    all_products.append(result["product"])
+                            else:
+                                # Round 1 results already in function_results list
+                                result = next(
+                                    (fr["result"] for fr in function_results if fr["function"] == func_call["name"]),
+                                    {}
+                                )
+
+                            round_results.append({"name": func_call["name"], "response": {"result": result}})
+
+                        # Send all round results back to Gemini
+                        logger.info(f"  Sending {len(round_results)} result(s) back to Gemini (round {rounds})")
+                        gemini_resp = await self.gemini_client.chat(
+                            conversation_history=updated_history,
+                            function_responses=round_results,
+                            system_instruction=system_instruction
+                        )
+
+                        ai_message = gemini_resp.get("message", "")
+                        pending_calls = gemini_resp.get("function_calls", [])
+
+                        logger.info(f"  Gemini round-{rounds} response: message='{ai_message[:80]}', "
+                                    f"next_function_calls={[f['name'] for f in pending_calls]}")
+
+                        # Append this exchange to updated_history for the next round
+                        # (empty assistant content signals function-call turn, then user function result turn)
+                        # (No need to be exact here; Gemini just needs continuity)
+
+                    if pending_calls:
+                        logger.warning(f"Stopped after {MAX_ROUNDS} rounds; {len(pending_calls)} calls still pending")
+
+                    logger.info(f"Multi-round function calling finished. Final message length: {len(ai_message)}")
+
                 except Exception as e:
-                    logger.error(f"Error getting final response from Gemini: {e}", exc_info=True)
+                    logger.error(f"Error in function calling loop: {e}", exc_info=True)
                     ai_message = f"I found the product information, but encountered an error generating the response: {str(e)}"
             
             # Only return function_calls if we didn't complete the Function Calling flow
             # If we completed the flow, the final ai_message contains the complete response
             return_function_calls = [] if function_calls and ai_message else function_calls
             
-            # Limit products to display (e.g., top 5)
-            display_products = all_products[:5] if all_products else []
+            # Deduplicate products by SKU and limit to 8 (primary + complementary)
+            seen = set()
+            deduped_products = []
+            for p in all_products:
+                sku = str(p.get("sku", ""))
+                if sku and sku not in seen:
+                    seen.add(sku)
+                    deduped_products.append(p)
+            display_products = deduped_products[:8]
             
             logger.info(f"Returning response - message length: {len(ai_message)}, function_calls: {len(return_function_calls)}, function_results: {len(function_results)}, products: {len(display_products)}")
             logger.info(f"Final message preview: '{ai_message[:200]}...'" if len(ai_message) > 200 else f"Final message: '{ai_message}'")
@@ -515,6 +658,23 @@ class ChatService:
                 "error": str(e)
             }
     
+    def _is_accessory_intent(self, message: str) -> bool:
+        """
+        Return True if the user's message expresses intent to find accessories,
+        complementary items, or ecosystem products for something they've already viewed.
+        """
+        msg = message.lower()
+        ACCESSORY_KEYWORDS = [
+            "accessories", "accessory", "what else", "what should i get",
+            "goes with", "go with", "pair with", "pairs with",
+            "complement", "complete my setup", "complete the setup",
+            "what accessories", "for it", "for this", "for that",
+            "what other", "anything else", "also need", "also want",
+            "soundbar", "mount", "cable", "case", "bag", "stand",
+            "enhance", "upgrade", "add to", "bundle",
+        ]
+        return any(kw in msg for kw in ACCESSORY_KEYWORDS)
+
     def _format_function_results(self, function_results: List[Dict[str, Any]]) -> str:
         """
         Format function execution results for Gemini

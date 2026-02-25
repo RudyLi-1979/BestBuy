@@ -162,10 +162,11 @@ Gemini generates natural language response
 | Camera | CameraX 1.3.1 |
 | Barcode | ML Kit 17.2.0 |
 | Networking | Retrofit 2.9.0 + OkHttp 4.12.0 |
-| Database | Room Database v3 |
+| Database | Room Database v4 |
 | Async | Coroutines 1.7.3 + Flow |
 | Image Loading | Glide 4.16.0 |
 | UI | XML Layouts + View Binding |
+| Chat Persistence | Room DB (`ChatMessageEntity`) + Gson (products as JSON) |
 
 ### UCP Server
 | Component | Technology |
@@ -271,6 +272,12 @@ User sees: Store locations, distance, availability
 | `/chat` | POST | Send chat message to AI |
 | `/chat/session/{id}/history` | GET | Get conversation history |
 | `/chat/session/{id}` | DELETE | Clear conversation |
+| `/cart` | POST | Add item to server-side cart |
+| `/cart/{session_id}` | GET | Get cart contents |
+| `/checkout` | POST | Create checkout session |
+| `/checkout/{id}` | PUT | Update checkout session |
+| `/checkout/{id}/complete` | POST | Complete checkout |
+| `/orders/{id}` | GET | Get order details |
 | `/` | GET | Health check |
 
 ### UCP Server APIs (UCP → Best Buy)
@@ -282,7 +289,12 @@ User sees: Store locations, distance, availability
 | `get_product_by_sku(sku)` | Product details |
 | `get_store_availability(sku, zip)` | Store inventory (BOPIS) |
 | `get_also_bought(sku)` | Cross-sell recommendations |
+| `get_recommendations(sku)` | Also-viewed recommendations |
+| `get_similar_products(sku)` | Similar product suggestions |
 | `advanced_search(filters)` | Multi-criteria search |
+| `get_categories(parent_id)` | Browse product categories |
+| `search_categories(name)` | Search categories by name |
+| `get_complementary_products(sku, category_id)` | Category-map fallback when alsoBought is empty |
 
 ---
 
@@ -418,6 +430,6 @@ Gemini API (External)
 
 ---
 
-**Last Updated**: February 24, 2026  
-**Version**: 1.0.0  
+**Last Updated**: February 25, 2026  
+**Version**: 1.1.0  
 **License**: Educational Use Only

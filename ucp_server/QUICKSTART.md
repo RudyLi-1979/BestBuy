@@ -48,35 +48,32 @@ python -c "from app.database import init_db; init_db()"
 
 ```powershell
 # Development mode (auto-reload)
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 58000
 
-# Or run directly with Python
-python -m app.main
+# Or use the PowerShell script
+.\start_server.ps1
 ```
 
 ## Step 6: Verify Installation
 
 Open a browser and visit:
 
-- **API Documentation**: http://localhost:8000/docs
-- **UCP Profile**: http://localhost:8000/.well-known/ucp
-- **Health Check**: http://localhost:8000/health
+- **API Documentation**: http://localhost:58000/docs
+- **ReDoc**: http://localhost:58000/redoc
+- **Health Check**: http://localhost:58000/
 
-## Next Steps
+## Implemented Modules
 
-Completed modules:
 - ✅ Project Structure
 - ✅ Data Models (Cart, Order, CheckoutSession)
-- ✅ Best Buy API Client
+- ✅ Best Buy API Client (search, UPC, store availability, also bought, advanced search, categories, complementary products)
 - ✅ Business Logic Services (Cart, Checkout, Order)
 - ✅ UCP Profile Endpoint
-
-Modules to be implemented:
-- [ ] Cart API Endpoints
-- [ ] Products API Endpoints
-- [ ] Checkout API Endpoints
-- [ ] Orders API Endpoints
-- [ ] Gemini LLM Integration
-- [ ] Android App Chat Mode
-
-Please refer to `UCP_Implementation_Plan.md` for complete implementation plan.
+- ✅ Cart API Endpoints
+- ✅ Products API Endpoints
+- ✅ Checkout API Endpoints
+- ✅ Orders API Endpoints
+- ✅ Gemini 2.5 Flash LLM Integration (function calling)
+- ✅ Android App Chat Mode
+- ✅ Rate Limiter (5 req/s, 50k req/day)
+- ✅ Category Cache (COMMON_CATEGORIES + runtime cache)

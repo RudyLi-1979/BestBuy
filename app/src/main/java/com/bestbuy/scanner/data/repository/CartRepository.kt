@@ -40,6 +40,8 @@ class CartRepository(private val cartDao: CartDao) {
                 sku = sku,
                 name = product.name ?: "Unknown Product",
                 price = product.salePrice ?: product.regularPrice ?: 0.0,
+                regularPrice = product.regularPrice ?: 0.0,
+                onSale = (product.onSale == true) && (product.salePrice != null) && (product.salePrice < (product.regularPrice ?: Double.MAX_VALUE)),
                 imageUrl = product.image
             )
             cartDao.insertItem(cartItem)

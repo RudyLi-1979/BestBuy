@@ -99,6 +99,48 @@ curl "https://api.bestbuy.com/v1/products/6443036/alsoViewed.json?apiKey=YOUR_AP
    - Check image loading speed
    - Verify caching mechanism
 
+## UCP Server Testing
+
+### Start the Server
+```powershell
+cd ucp_server
+.\start_docker.ps1          # Docker (recommended) → http://localhost:58000
+# OR
+.\venv\Scripts\activate
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 58000
+```
+
+### Chat API
+```bash
+curl -X POST http://localhost:58000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Show me Mac mini 256GB", "session_id": "test-001"}'
+```
+
+### Store Availability (BOPIS)
+```bash
+curl -X POST http://localhost:58000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Is SKU 6509650 available near zip 94103?", "session_id": "test-002"}'
+```
+
+### Also Bought / Advanced Search via Chat
+```bash
+curl -X POST http://localhost:58000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What accessories are frequently bought with AirPods Pro?", "session_id": "test-003"}'
+
+curl -X POST http://localhost:58000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Show me Sony TVs under $800", "session_id": "test-004"}'
+```
+
+### Health Check
+```bash
+curl http://localhost:58000/
+# Swagger UI: http://localhost:58000/docs
+```
+
 ## Troubleshooting
 
 ### API Returns 401 Error

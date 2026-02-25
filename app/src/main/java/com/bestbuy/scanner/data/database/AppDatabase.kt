@@ -18,7 +18,7 @@ import com.bestbuy.scanner.data.model.UserInteraction
  */
 @Database(
     entities = [CartItem::class, UserInteraction::class, ChatMessageEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -74,6 +74,16 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /**
+         * Migration from version 3 to 4: Add regularPrice and onSale columns to cart_items
+         */
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE cart_items ADD COLUMN regularPrice REAL NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE cart_items ADD COLUMN onSale INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /**
          * Get database instance (singleton pattern)
          */
         fun getDatabase(context: Context): AppDatabase {
@@ -83,7 +93,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "bestbuy_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                 INSTANCE = instance
                 instance

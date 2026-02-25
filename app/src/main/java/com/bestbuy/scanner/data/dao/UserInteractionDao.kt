@@ -36,6 +36,18 @@ interface UserInteractionDao {
      */
     @Query("SELECT category, COUNT(*) as count FROM user_interactions WHERE category IS NOT NULL GROUP BY category ORDER BY count DESC LIMIT :limit")
     suspend fun getMostViewedCategories(limit: Int): List<CategoryCount>
+
+    /**
+     * Get most frequently interacted manufacturers (brands the user prefers)
+     */
+    @Query("SELECT manufacturer, COUNT(*) as count FROM user_interactions WHERE manufacturer IS NOT NULL GROUP BY manufacturer ORDER BY count DESC LIMIT :limit")
+    suspend fun getTopManufacturers(limit: Int): List<ManufacturerCount>
+
+    /**
+     * Get the most recently viewed/scanned distinct SKUs
+     */
+    @Query("SELECT DISTINCT sku FROM user_interactions ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getRecentSkus(limit: Int): List<String>
     
     /**
      * Get all SKUs that user has viewed
@@ -61,5 +73,13 @@ interface UserInteractionDao {
  */
 data class CategoryCount(
     val category: String,
+    val count: Int
+)
+
+/**
+ * Data class for manufacturer count query result
+ */
+data class ManufacturerCount(
+    val manufacturer: String,
     val count: Int
 )

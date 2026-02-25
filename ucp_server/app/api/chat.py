@@ -49,6 +49,10 @@ async def chat(
         logger.info(f"User ID: {user_id}")
         logger.info(f"Message: {request.message}")
         logger.info(f"Session ID: {request.session_id}")
+        if request.user_context:
+            logger.info(f"User context — categories: {request.user_context.recent_categories}, "
+                        f"brands: {request.user_context.favorite_manufacturers}, "
+                        f"interactions: {request.user_context.interaction_count}")
         logger.info("=" * 80)
         
         # Get or create session
@@ -64,7 +68,8 @@ async def chat(
             message=request.message,
             db=db,
             user_id=user_id,
-            conversation_history=conversation_history
+            conversation_history=conversation_history,
+            user_context=request.user_context
         )
         
         # Update conversation history
