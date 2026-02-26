@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">BestBuy Scanner</string>
+    <string name="clear_chat_title">Clear Conversation</string>
+    <string name="clear_chat_message">This will remove all messages in this conversation. Continue?</string>
+    <string name="clear_chat_confirm">Clear</string>
+    <string name="cancel">Cancel</string>
     <string name="scan_instruction">Align barcode to scan</string>
     <string name="manual_input">Manual UPC Input</string>
     <string name="searching">Searching for product...</string>
@@ -27,5 +31,5 @@
     <string name="send">Send</string>
     <string name="voice_input">Voice Input</string>
     <string name="scan_barcode">Scan Barcode</string>
-    <string name="ai_assistant">AI Shopping Assistant</string>
+    <string name="ai_assistant">AI-OS™ Shopping Assistant</string>
 </resources>

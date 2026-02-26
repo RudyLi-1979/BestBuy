@@ -12,4 +12,7 @@
     <color name="bestbuy_blue">#0046BE</color>
     <color name="bestbuy_yellow">#FFF200</color>
     <color name="bestbuy_dark_blue">#001E4C</color>
+    <color name="sale_red">#E53935</color>
+    <color name="card_stroke">#CCCCCC</color>
+    <color name="chip_bg">#F2F5FA</color>
 </resources>

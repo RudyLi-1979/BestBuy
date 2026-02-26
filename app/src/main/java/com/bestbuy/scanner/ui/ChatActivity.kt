@@ -103,6 +103,17 @@ class ChatActivity : AppCompatActivity() {
         toolbar.findViewById<android.view.View>(R.id.cartButton).setOnClickListener {
             startActivity(Intent(this, CartActivity::class.java))
         }
+        
+        // Clear conversation button
+        toolbar.findViewById<android.widget.ImageButton>(R.id.clearChatButton).setOnClickListener {
+            showClearChatConfirmDialog()
+        }
+
+        // Suggestion chip click → auto-fill messageInput and send
+        chatAdapter.onSuggestionClick = { question ->
+            messageInput.setText(question)
+            sendMessage()
+        }
 
         // Initialize views
         messagesRecyclerView = findViewById(R.id.messagesRecyclerView)
@@ -174,7 +185,16 @@ class ChatActivity : AppCompatActivity() {
             chatViewModel.messages.collect { messages ->
                 chatAdapter.submitList(messages)
                 if (messages.isNotEmpty()) {
-                    messagesRecyclerView.scrollToPosition(messages.size - 1)
+                    // First post: RecyclerView positions the last item into view.
+                    // Second post (via Handler 250ms): fires after the nested product-
+                    // card RecyclerView and suggestion chips have been measured, so
+                    // the full message height is known and we can scroll to the bottom.
+                    messagesRecyclerView.post {
+                        messagesRecyclerView.scrollToPosition(messages.size - 1)
+                    }
+                    messagesRecyclerView.postDelayed({
+                        messagesRecyclerView.smoothScrollToPosition(messages.size - 1)
+                    }, 250)
                 }
             }
         }
@@ -203,6 +223,17 @@ class ChatActivity : AppCompatActivity() {
     /**
      * Send message to AI assistant
      */
+    private fun showClearChatConfirmDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.clear_chat_title)
+            .setMessage(R.string.clear_chat_message)
+            .setPositiveButton(R.string.clear_chat_confirm) { _, _ ->
+                chatViewModel.clearChat()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     private fun sendMessage() {
         val message = messageInput.text.toString().trim()
         if (message.isEmpty()) {

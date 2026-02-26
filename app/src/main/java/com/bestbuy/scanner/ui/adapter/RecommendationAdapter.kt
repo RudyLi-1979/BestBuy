@@ -60,6 +60,9 @@ class RecommendationAdapter(
             binding.root.setOnClickListener {
                 onItemClick(product)
             }
+
+            // RecommendationProduct has no review data — keep row visible but hide contents
+            binding.ratingRow.visibility = android.view.View.VISIBLE
         }
     }
     

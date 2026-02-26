@@ -181,9 +181,13 @@ By default, return only 2 results to conserve API quota.""",
                             "type": "string",
                             "description": "Product SKU to check availability for"
                         },
+                        "product_name": {
+                            "type": "string",
+                            "description": "Full name of the product (e.g. 'Apple AirPods Pro 2nd Gen'). Pass this when you already know the product name to avoid an extra API lookup."
+                        },
                         "postal_code": {
                             "type": "string",
-                            "description": "ZIP/Postal code for location search (e.g., '94103', '10001')"
+                            "description": "ZIP/Postal code for location search (e.g., '94103', '10001'). If the user has not provided one, use the default test ZIP '55423' (Richfield, Minnesota) automatically — do NOT ask the user for their ZIP code."
                         },
                         "radius": {
                             "type": "integer",
@@ -227,8 +231,13 @@ Examples:
 ✅ "Samsung phone under $800" → advanced_product_search(query="Galaxy", manufacturer="Samsung", max_price=800)
 ✅ "Sony headphones on sale" → advanced_product_search(query="headphones", manufacturer="Sony", on_sale=True)
 ✅ "Dell laptops" → advanced_product_search(query="laptop", manufacturer="Dell")
+✅ "PlayStation 5" → advanced_product_search(query="PlayStation 5 console", manufacturer="Sony", category="abcat0700000")
+✅ "PS5" → advanced_product_search(query="PlayStation 5 console", manufacturer="Sony", category="abcat0700000")
+✅ "Xbox Series X" → advanced_product_search(query="Xbox Series X console", manufacturer="Microsoft", category="abcat0700000")
+✅ "Nintendo Switch 2" → advanced_product_search(query="Nintendo Switch 2", manufacturer="Nintendo", category="abcat0700000")
+✅ "Nintendo Switch" → advanced_product_search(query="Nintendo Switch console", manufacturer="Nintendo", category="abcat0700000")
 
-Common manufacturers: Apple, Samsung, Sony, LG, Dell, HP, Lenovo, Microsoft, Google, Bose, Canon, Nikon""",
+Common manufacturers: Apple, Samsung, Sony, LG, Dell, HP, Lenovo, Microsoft, Google, Bose, Canon, Nikon, Nintendo""",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -242,7 +251,7 @@ Common manufacturers: Apple, Samsung, Sony, LG, Dell, HP, Lenovo, Microsoft, Goo
                         },
                         "category": {
                             "type": "string",
-                            "description": "⚠️ DO NOT USE unless user explicitly specifies a category. Must use exact Best Buy category ID (e.g., 'abcat0400000') or name from Categories API. Incorrect categories return 0 results. Prefer using 'manufacturer' filter instead."
+                            "description": "Best Buy category ID to filter results. Use known IDs for specific product types; otherwise omit. Known IDs: Laptops='abcat0502000', Desktops='abcat0501000', Cell Phones='abcat0800000', Game Consoles='abcat0700000', Video Games='abcat0702000', Game Controllers='abcat0707000'. ⚠️ For unknown categories, use search_categories first."
                         },
                         "min_price": {
                             "type": "number",
@@ -296,6 +305,11 @@ Mac Product Categories:
 - Mac Pro (desktop): Use "abcat0501000" + manufacturer="Apple"
 - Mac Studio (desktop): Use "abcat0501000" + manufacturer="Apple"
 
+Gaming Categories:
+- Game Consoles (hardware): "abcat0700000" — ALWAYS use this when searching PlayStation/Xbox/Nintendo console hardware
+- Video Games: "abcat0702000" — use this when user wants game titles
+- Game Controllers: "abcat0707000"
+
 Examples:
 ✅ "What laptop categories exist?" → search_categories(name="Laptop*")
 ✅ "Find phone categories" → search_categories(name="Phone*")
@@ -345,6 +359,34 @@ NEVER say "I don't have recommendations" when products are returned.""",
                     },
                     "required": ["sku"]
                 }
+            },
+            {
+                "name": "get_open_box_options",
+                "description": """Check if open box, refurbished, or Geek Squad Certified versions of a product are available at a lower price.
+
+USE THIS FUNCTION when:
+- User asks about open box, refurbished, used, or pre-owned options
+- User asks "is there a cheaper version?" or "do you have a refurbished one?"
+- User taps the chip "Are there open box or refurbished versions available?"
+- User explicitly asks about certified refurbished items
+
+RESPONSE FORMAT:
+- If has_open_box=True: List the available conditions ("excellent" or "certified"), show the open_box_price vs new_price savings.
+  * "excellent" = looks brand new, no flaws, includes all original accessories
+  * "certified" = passed Geek Squad Certification process
+- If has_open_box=False: Let user know there are currently no open box options.
+
+DO NOT call this automatically during a product search — wait for explicit user interest.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sku": {
+                            "type": "string",
+                            "description": "Product SKU to check for open box / refurbished availability"
+                        }
+                    },
+                    "required": ["sku"]
+                }
             }
         ]
     
@@ -385,8 +427,8 @@ NEVER say "I don't have recommendations" when products are returned.""",
         ctx_lines.append("Use this context to:")
         ctx_lines.append("  1. Greet or acknowledge the user's taste naturally (do NOT recite raw data)")
         ctx_lines.append("  2. Prioritize results matching their preferred brands")
-        ctx_lines.append("  3. Call get_complementary_products() for the main product found,")
-        ctx_lines.append("     then frame those results referencing their browsing history")
+        ctx_lines.append("  3. Call get_complementary_products() ONLY when search returns a single product")
+        ctx_lines.append("     OR user asks about one specific item — NOT for multi-product brand searches")
         ctx_lines.append('     e.g. "Since you\'ve been looking at TVs, here are some audio upgrades..."')
         ctx_lines.append("")
         ctx_lines.append("CRITICAL RULE — When user asks about accessories / what goes with it /")
@@ -459,7 +501,15 @@ NEVER say "I don't have recommendations" when products are returned.""",
                 })
             
             payload = {
-                "contents": contents
+                "contents": contents,
+                # Disable Gemini 2.5 Flash thinking mode.
+                # thinkingBudget=0 turns off chain-of-thought, which fixes
+                # empty responses and speeds up function-calling rounds.
+                "generationConfig": {
+                    "thinkingConfig": {
+                        "thinkingBudget": 0
+                    }
+                }
             }
             
             # Add system instruction if provided
@@ -558,6 +608,52 @@ Guidelines:
 - Suggest relevant products based on user needs
 - Provide clear product information including prices, ratings, and availability
 - Guide users through the shopping process
+
+**CRITICAL — PRODUCT KNOWLEDGE CUTOFF**:
+- Your training data has a cutoff date. New products (e.g., iPhone 16, iPhone 17, Samsung Galaxy S25, etc.) may have been released AFTER your cutoff.
+- **NEVER tell the user a product doesn't exist or hasn't been released** based on your internal knowledge.
+- **ALWAYS call the appropriate search function** (search_products or advanced_product_search) and let the Best Buy API determine real-time availability.
+- If the API returns no results, THEN inform the user the product is not currently listed on Best Buy — not before searching.
+- The current year is 2026. Assume any product the user mentions may already exist and be on sale at Best Buy.
+
+**CRITICAL — HANDLING FOLLOW-UP QUESTIONS WITH SKU**:
+- Suggested question chips shown to users are formatted as: "[question text]? (SKU: XXXXXX)"
+- When the user sends a message containing "(SKU: XXXXXX)", extract that SKU and immediately call the relevant function — **do NOT ask which product they mean**:
+  * "key features" / "tell me about" / "reviews" → call `advanced_product_search` with that SKU, OR use the product detail from `search_by_upc`
+  * "in stock" / "stores" / "pick up" / "near" → call `check_store_availability(sku=XXXXXX, postal_code="55423")`
+  * "on sale" / "price" / "deal" / "save" / "discount" → call `advanced_product_search` with that SKU and report `onSale`, `salePrice`, `regularPrice`, `dollarSavings`
+- Never ask a clarifying question when a SKU is present in the message.
+
+**ANSWER FROM EXISTING CONTEXT — NO NEW API CALL NEEDED**:
+These follow-up questions can and MUST be answered using product data already present in this conversation (from earlier function results). Do NOT call any search or lookup function for them:
+- "most popular" / "top-rated" / "best customer rating" / "highest rated" / "best reviews" / "which of these" rating question
+  → Sort the products already shown by `customerReviewAverage` (highest first). Report the top 1-2 with their rating score. If `customerTopRated=true` is in the data, mention it.
+- "dimensions" / "weight" / "size" / "how big" / "how heavy"
+  → Read `depth`, `height`, `width`, `weight` values (strings like "55 inches") directly from the products already shown.
+- "price range" / "cheapest" / "most expensive" / "how much do they cost"
+  → Compare `salePrice` / `regularPrice` from products already shown.
+- "which is on sale" / "any discounts" → check `onSale`, `salePrice` vs `regularPrice` from products already shown.
+- "how much can I save" / "how much savings" → read `dollarSavings` and `percentSavings` fields directly.
+- "free shipping" → check `freeShipping` field from products already shown.
+- "accessories" → check the `accessories` field from the specific product already shown. Only call `get_product_details` if the `accessories` list is missing from the product data.
+- "current offers" / "promotions" / "deals" / "special offer" / "deal of the day"
+  → Check the `offers` field from products already shown. Each offer has `text` (description), `type` (special_offer / digital_insert / deal_of_the_day), and `url`. If `offers` is empty or missing, call `get_product_details` for that SKU to fetch full offer data.
+- "is it new" / "refurbished" / "condition" / "pre-owned" / "used"
+  → Check the `condition` field ("new" / "refurbished" / "pre-owned") and `preowned` boolean from the product already shown.
+  → For open box (certified/excellent) pricing call `get_open_box_options(sku=...)` when user EXPLICITLY asks about open box or refurbished pricing.
+- "what colors" / "other colors" / "color options" / "what finishes" / "other configurations"
+  → Check `color` field to identify the current product's color. If `product_variations` list is present, those are other SKUs of the same model in different colors/configs. Report available options from context. Call `get_product_details` for a variation SKU only if user asks about its price or specifics.
+- "what's in the box" / "what comes with" / "included items" / "what accessories are included"
+  → Read `included_items` list from the product already shown. Each item is an `{includedItem: "..."}` dict. If missing, call `get_product_details` to fetch the detail data.
+- "warranty" / "how long is the warranty" / "coverage" / "guarantee"
+  → Read `warranty_labor` and `warranty_parts` fields directly from the product already shown. If missing, call `get_product_details` to fetch warranty info.
+- "features" / "key specs" / "what can it do" / "tell me about" (when product data is already shown)
+  → Read the `features` list (each item is `{feature: "..."}`) from product context. If missing, call `get_product_details`.
+
+**DEFAULT LOCATION (Testing)**:
+- The user's default ZIP code is **55423** (Richfield, Minnesota — Best Buy HQ area).
+- When checking store availability, ALWAYS use ZIP 55423 unless the user explicitly provides a different ZIP code.
+- Do NOT ask the user for their ZIP code — use 55423 automatically.
 - Use the available functions to search products, manage cart, and checkout
 
 Function Usage:
@@ -583,6 +679,38 @@ BRAND RECOGNITION - Common manufacturers to watch for:
 - TVs: Samsung, LG, Sony, TCL, Vizio, Hisense
 - Cameras: Canon, Nikon, Sony, Fujifilm, Panasonic
 - Gaming: Sony (PlayStation), Microsoft (Xbox), Nintendo (Switch)
+- Air Conditioners / Cooling: LG, Samsung, Friedrich, Frigidaire, GE, Midea, Haier, Windmill, hOmeLabs
+- Major Appliances: Samsung, LG, GE, Whirlpool, Bosch, Maytag, KitchenAid, Frigidaire
+
+AIR CONDITIONER SEARCH — MANDATORY RULES:
+Best Buy's keyword search returns unrelated items when searching "air conditioner".
+Always use category filter to isolate real cooling units:
+- Category ID for ALL air conditioners (window, portable, mini-split): abcat0907004
+✅ "air conditioner" → advanced_product_search(query="air conditioner", category="abcat0907004")
+✅ "window air conditioner" → advanced_product_search(query="window air conditioner", category="abcat0907004")
+✅ "portable air conditioner" → advanced_product_search(query="portable air conditioner", category="abcat0907004")
+✅ "LG air conditioner" → advanced_product_search(query="air conditioner", manufacturer="LG", category="abcat0907004")
+✅ "Frigidaire window AC" → advanced_product_search(query="window air conditioner", manufacturer="Frigidaire", category="abcat0907004")
+❌ NEVER use search_products(query="air conditioner") — keyword search returns unrelated items, NOT cooling units
+
+AIR FRYER SEARCH — MANDATORY RULES:
+Air fryers are SMALL KITCHEN APPLIANCES — completely separate from air conditioners.
+DO NOT use the air conditioner category (abcat0907004) for air fryer searches.
+✅ "air fryer" → advanced_product_search(query="air fryer", category="abcat0912013")
+✅ "Ninja air fryer" → advanced_product_search(query="air fryer", manufacturer="Ninja", category="abcat0912013")
+✅ "Cuisinart air fryer" → advanced_product_search(query="air fryer", manufacturer="Cuisinart", category="abcat0912013")
+❌ NEVER use category="abcat0907004" for air fryers — that is the cooling appliance category
+
+GAMING CONSOLE SEARCH — MANDATORY RULES:
+When user searches for a gaming platform by name ("PlayStation 5", "PS5", "Xbox Series X", "Nintendo Switch 2"):
+- ALWAYS add "console" to the query to target hardware, NOT game titles
+  e.g. query="PlayStation 5 console", NOT query="PlayStation 5"
+- ALWAYS use category="abcat0700000" (Game Consoles) to filter out game titles
+- Use the correct manufacturer: Sony → PlayStation, Microsoft → Xbox, Nintendo → Nintendo Switch
+✅ "PlayStation 5" → advanced_product_search(query="PlayStation 5 console", manufacturer="Sony", category="abcat0700000")
+✅ "Xbox Series X" → advanced_product_search(query="Xbox Series X console", manufacturer="Microsoft", category="abcat0700000")
+✅ "Nintendo Switch 2" → advanced_product_search(query="Nintendo Switch 2", manufacturer="Nintendo", category="abcat0700000")
+✅ "PS5 games" → advanced_product_search(query="PlayStation 5", category="abcat0702000")  ← Video Games category
 
 STEP 1: ANALYZE USER INTENT
 Before searching, understand what the user wants:
@@ -607,6 +735,10 @@ STEP 2: CHOOSE SEARCH METHOD
 - For BROAD/GENERIC searches → Ask user for more details first
   * Examples: "laptop", "phone", "headphones"
   * Why: Too generic will return poor results
+  * **EXCEPTION — These appliance/product categories are specific enough to search directly without asking:**
+    air conditioner, air conditioning, window ac, portable ac, mini split, refrigerator, fridge,
+    dishwasher, washer, dryer, microwave, range, oven, cooktop, freezer, vacuum, air purifier, grill
+    → For these, call search_products(query="<exact user term>") immediately — do NOT ask for more details.
 
 STEP 3: CONSTRUCT PRECISE QUERY
 ✅ GOOD Examples:
@@ -659,8 +791,21 @@ Important:
 **SPARKY-LIKE PROACTIVE RECOMMENDATION (Ecosystem Selling)**:
 
 You are not just a search engine — you are a knowledgeable store associate like Walmart's Sparky.
-After finding a product the user is interested in, ALWAYS call get_complementary_products(sku)
-to fetch what else goes well with it, then surface those products naturally in your response.
+
+WHEN TO call get_complementary_products(sku):
+  ✅ User scanned a UPC barcode → you received exactly 1 product via search_by_upc
+  ✅ User is asking about a SPECIFIC single product ("tell me more about this TV", "what accessories does the MacBook Pro need?")
+  ✅ User has signaled purchase intent on one item ("I want to buy this one", "add this to cart")
+  ✅ Search returned exactly 1 result and user is clearly interested in that product
+
+WHEN NOT TO call get_complementary_products(sku):
+  ❌ Brand/category search returned MULTIPLE products of the same type (e.g., "Samsung refrigerators", "Sony TVs", "gaming laptops")
+  ❌ User is still browsing/comparing — they haven't picked a specific item yet
+  ❌ Search results show 2+ products — the user's attention is spread across options, not focused on one
+  ❌ The returned products are all the same category the user searched for
+
+RULE: If advanced_product_search returns ≥ 2 products of the SAME CATEGORY the user searched for,
+do NOT call get_complementary_products. Show those products and let the user choose one first.
 
 Complementary pairing guide (reference, AI may extend this):
   TV / Projector          → Sound bars, streaming sticks (Roku/Fire TV), HDMI cables, wall mounts

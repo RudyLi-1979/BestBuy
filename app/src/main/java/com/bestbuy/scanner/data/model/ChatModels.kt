@@ -21,7 +21,11 @@ data class ChatMessage(
     
     // Optional: function call information
     @SerializedName("function_call")
-    val functionCall: FunctionCall? = null
+    val functionCall: FunctionCall? = null,
+
+    // Optional: AI-generated suggested follow-up questions shown as chips
+    // Not persisted to Room DB — ephemeral, shown only for freshly received messages
+    val suggestedQuestions: List<String>? = null
 )
 
 /**
@@ -90,7 +94,11 @@ data class ChatResponse(
     val functionCalls: List<FunctionCall>? = null,
     
     @SerializedName("products")
-    val products: List<Product>? = null
+    val products: List<Product>? = null,
+
+    /** AI-generated follow-up question suggestions (max 3) */
+    @SerializedName("suggested_questions")
+    val suggestedQuestions: List<String>? = null
 )
 
 /**

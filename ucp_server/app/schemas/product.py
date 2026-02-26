@@ -8,8 +8,10 @@ from typing import Optional, List
 
 class ProductSimple(BaseModel):
     """
-    Simplified product model for chat responses and product cards
-    Contains only essential information for display
+    Simplified product model for chat responses and product cards.
+    Field names are snake_case (matches service dicts).
+    Aliases are camelCase — FastAPI uses by_alias=True so Android receives salePrice etc.
+    populate_by_name=True allows input by both name and alias.
     """
     sku: int
     name: str
@@ -18,7 +20,14 @@ class ProductSimple(BaseModel):
     on_sale: Optional[bool] = Field(None, alias="onSale")
     manufacturer: Optional[str] = None
     image: Optional[str] = None
-    
+    medium_image: Optional[str] = Field(None, alias="mediumImage")
+    thumbnail_image: Optional[str] = Field(None, alias="thumbnailImage")
+    customer_review_average: Optional[float] = Field(None, alias="customerReviewAverage")
+    customer_review_count: Optional[int] = Field(None, alias="customerReviewCount")
+    customer_top_rated: Optional[bool] = Field(None, alias="customerTopRated")
+    dollar_savings: Optional[float] = Field(None, alias="dollarSavings")
+    percent_savings: Optional[float] = Field(None, alias="percentSavings")
+
     class Config:
         populate_by_name = True
         json_schema_extra = {
@@ -70,6 +79,42 @@ class Product(BaseModel):
     free_shipping: Optional[bool] = Field(None, alias="freeShipping")
     in_store_availability: Optional[bool] = Field(None, alias="inStoreAvailability")
     online_availability: Optional[bool] = Field(None, alias="onlineAvailability")
+    customer_top_rated: Optional[bool] = Field(None, alias="customerTopRated")
+    # Physical dimensions — Best Buy returns strings like "10.5 inches" / "10.1 pounds"
+    depth: Optional[str] = None
+    height: Optional[str] = None
+    width: Optional[str] = None
+    weight: Optional[str] = None
+    # Product color (e.g. "Black", "Silver") — simple string from API
+    color: Optional[str] = None
+    # Accessories list [{sku, name}]
+    accessories: Optional[List[dict]] = None
+    # Listing Products — condition: "new" | "refurbished" | "pre-owned"
+    condition: Optional[str] = None
+    # Previously owned / used product flag
+    preowned: Optional[bool] = None
+    # Pricing savings
+    dollar_savings: Optional[float] = Field(None, alias="dollarSavings")
+    percent_savings: Optional[str] = Field(None, alias="percentSavings")
+    # Offers and Deals — list of {id, text, type, startDate, endDate, url}
+    # types: special_offer | digital_insert | deal_of_the_day
+    offers: Optional[List[dict]] = None
+    # Warranty descriptions from manufacturer
+    warranty_labor: Optional[str] = Field(None, alias="warrantyLabor")
+    warranty_parts: Optional[str] = Field(None, alias="warrantyParts")
+    # Product variations — list of {sku} for related color/size/config SKUs
+    # Only returned by the detail (get_product_by_sku) endpoint
+    product_variations: Optional[List[dict]] = Field(None, alias="productVariations")
+    # Product features — list of {feature: "..."} strings
+    # Only returned by the detail endpoint
+    features: Optional[List[dict]] = None
+    # Product details — list of {name: "...", value: "..."} spec entries
+    # e.g. {"name": "Product Height With Stand", "value": "41.7 inches"}
+    # Only returned by the detail endpoint
+    details: Optional[List[dict]] = None
+    # Items included in the box — list of {includedItem: "..."}
+    # Only returned by the detail endpoint
+    included_items: Optional[List[dict]] = Field(None, alias="includedItemList")
     category_path: Optional[List[CategoryPathItem]] = Field(None, alias="categoryPath")
     
     class Config:

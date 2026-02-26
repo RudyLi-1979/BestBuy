@@ -1,7 +1,7 @@
 # 推薦系統技術文件
 
-> **最後更新：2026-02-24**  
-> 描述 BestBuy Scanner App 的個人化推薦機制，包含配件推薦（Sparky-like）與相關商品推薦的完整判斷流程。
+> **最後更新：2026-02-26**  
+> 描述 BestBuy Scanner App 的個人化推薦機制，包含配件推薦（Sparky-like）、相關商品推薦，以及搜尋結果後的 **Follow-up Question Chips（推薦問題按鈕）** 完整判斷流程。
 
 ---
 
@@ -15,8 +15,11 @@
 6. [類別配對對應表](#6-類別配對對應表)
 7. [API 配額管理](#7-api-配額管理)
 8. [Gemini AI 整合](#8-gemini-ai-整合)
-9. [完整請求流程圖](#9-完整請求流程圖)
-10. [相關檔案索引](#10-相關檔案索引)
+9. [SKU Detail 預先載入（Pre-fetch）](#9-sku-detail-預先載入pre-fetch)
+10. [Follow-up Question Chips（推薦問題按鈕）](#10-follow-up-question-chips推薦問題按鈕)
+11. [Best Buy API 欄位擴充](#11-best-buy-api-欄位擴充)
+12. [完整請求流程圖](#12-完整請求流程圖)
+13. [相關檔案索引](#13-相關檔案索引)
 
 ---
 
@@ -293,7 +296,225 @@ Round 2: Gemini → 最終文字回應（列出 TV + soundbar）
 
 ---
 
-## 9. 完整請求流程圖
+## 9. SKU Detail 預先載入（Pre-fetch）
+
+當用戶訊息中明確包含 `SKU: XXXXXXX`（例如點擊 suggestion question chip 後送出），Chat Service 會在呼叫 Gemini 之前立刻預先獲取該 SKU 的完整規格，並注入 `system_instruction`，讓 Gemini 無需再次呼叫 API 就能精準回答尺寸、保固、重量等問題。
+
+### 觸發條件
+
+```python
+# chat_service.py — process_message() 中，位於 "Call Gemini" 之前
+sku_in_message = re.findall(r'\bSKU[:\s#]+(\d{6,8})\b', message, re.IGNORECASE)
+if sku_in_message:
+    detail_product = await self.bestbuy_client.get_product_by_sku(detail_sku)
+    # 注入完整規格到 system_instruction
+```
+
+### 注入格式
+
+```
+══════════════════════════════════════════════════════════════════════════
+FULL PRODUCT DETAIL for SKU 6578065 (Samsung 77" S90D OLED TV):
+  Price: $1759.99 (on sale, was $1999.99)
+  Dimensions & Weight:
+    Product Width: 67.7 inches
+    Product Height With Stand: 41.7 inches
+    Product Height Without Stand: 38.6 inches
+    Product Depth With Stand: 14.1 inches
+    Product Depth Without Stand: 1.8 inches
+    Product Weight With Stand: 80.7 pounds
+    Product Weight Without Stand: 76.7 pounds
+    Stand Width: 14.4 inches
+    Stand Depth: 14.1 inches
+  Color: Graphite Black
+  Customer Rating: 4.1 (935 reviews)
+  Warranty (Labor): 1 year
+  Warranty (Parts): 1 year
+INSTRUCTION: Use ONLY the data above to answer the user's question.
+══════════════════════════════════════════════════════════════════════════
+```
+
+### 尺寸資料來源：`details[]` 集合
+
+BestBuy API 的標準 `height`/`depth`/`weight` 欄位通常為空，實際尺寸存放在 `details.name`/`details.value` 集合中（含 Stand / Without Stand 分項）。
+
+| 標準欄位（通常空） | details[] 集合（實際資料）|
+|---|---|
+| `height: null` | `Product Height With Stand: 41.7 inches` |
+| `depth: null` | `Product Depth With Stand: 14.1 inches` |
+| `weight: null` | `Product Weight With Stand: 80.7 pounds` |
+| `width: "67.7 inches"` ✅ | `Product Width: 67.7 inches` |
+
+`get_product_by_sku()` 的 `show=` 參數現已加入 `details.name,details.value`；Pre-fetch 邏輯優先讀取 `details[]`，再 fallback 到標準欄位，合併後全部注入 Gemini context。
+
+---
+
+## 10. Follow-up Question Chips（推薦問題按鈕）
+
+搜尋結果顯示後，Server 在 `suggested_questions` 欄位返回最多 **3 個**可點擊的問題按鈕。由 `chat_service.py` 的 `_generate_suggested_questions()` 依照**真實商品資料**動態生成，不使用 LLM，速度快且確定性高。
+
+### 觸發條件
+
+```python
+if display_products:
+    suggested_questions = await self._generate_suggested_questions(
+        user_message=message,
+        products=display_products   # 最多 8 筆推送給前端的商品
+    )
+```
+
+### 商品類別偵測
+
+```python
+_is_audio       = any(w in _all_text for w in ['headphone', 'earphone', 'earbud', 'airpod', 'speaker', ...])
+_is_tv_monitor  = any(w in _all_text for w in ['tv', 'television', 'monitor', 'oled', 'qled', ...])
+_is_appliance   = any(w in _all_text for w in ['refrigerator', 'washer', 'dryer', 'microwave', ...])
+_is_laptop_tablet = any(w in _all_text for w in ['laptop', 'macbook', 'tablet', 'ipad', ...])
+_single_product = len(products) == 1
+```
+
+> ⚠️ **Important fix**：`_is_audio` **前置於** `_is_tv_monitor` 判斷。耳機商品名稱可能含 `screen` 字樣（如 noise-cancelling + screen），若先判斷 TV 會誤觸發「其他螢幕尺寸」問題。
+
+### 情況 A：單一商品（`_single_product == True`）
+
+適用：掃描條碼、搜尋精確型號、或搜尋結果只剩 1 筆時。
+
+> **設計原則**：Product Card 已顯示 ★ 評分、Sale badge、售價、省多少錢。因此 suggestion questions **不再重複詢問評分或是否折扣**，改為提供卡片上看不到的深度購買決策資訊。
+
+| 優先序 | 問題 | 智能跳過條件 | Gemini 回答方式 |
+|--------|------|-------------|----------------|
+| SQ1 | **保固說明？** | 用戶剛問過保固相關詞 | 讀取 Pre-fetch 注入的 `warrantyLabor/warrantyParts` |
+| SQ2 | **其他顏色/配置？** | 用戶剛問過顏色相關詞 | 若有 `productVariations`：「其他顏色或配置」；否則「是否有其他外觀選項」 |
+| SQ3 | **有 Open Box / 翻新品 / 二手品？** | 用戶剛問過 open box/refurb/pre-owned | 觸發 `get_open_box_options(sku)` |
+| SQ4 | **尺寸與重量？** | 用戶剛問過 dimension/weight/size 相關詞 | 讀取 Pre-fetch 注入的 `details[]` 尺寸資料 |
+| SQ5 | **盒內附件有哪些？** | 用戶剛問過 included/in the box | 讀取 `includedItemList`；若有資料：「What comes in the box」；否則：「What's included」 |
+| SQ6 | **推薦配件？** | — | 若有 `accessories` 資料：「compatible accessories」；否則：「recommended accessories」 |
+| SQ7 | 目前有特別優惠？ | — | 僅在有明確 `offers` 資料時才加入 pool |
+
+**智能去重機制**：每個問題都有對應的關鍵詞偵測，若用戶剛問過相關問題，自動跳過該問題，顯示 pool 中下一個，不浪費 chip 名額。
+
+```python
+_already_asked_dims     = any(kw in user_message.lower() for kw in ['dimension','weight','height','width','depth','size','how big','how heavy'])
+_already_asked_warranty = any(kw in user_message.lower() for kw in ['warrant','guarantee','coverage'])
+_already_asked_openbox  = any(kw in user_message.lower() for kw in ['open box','refurb','pre-owned','preowned','used','second hand'])
+_already_asked_color    = any(kw in user_message.lower() for kw in ['color','colour','finish','variant','configuration'])
+_already_asked_included = any(kw in user_message.lower() for kw in ["what's included","in the box","comes with","included"])
+```
+
+### 情況 B：多商品結果（`_single_product == False`）
+
+| 優先序 | 問題 | 判斷條件 |
+|--------|------|----------|
+| MQ1 | 哪款評分最高？ | 固定（多商品時 rating 不在卡片顯示）|
+| MQ2 | 哪款折扣最大？ | `best_savings > 0` |
+| MQ3 | 類別規格問題（見下表）| 類別偵測 |
+| MQ4 | 顏色/外觀選項？ | `len(colors) >= 2` |
+| MQ5 | 目前有特別促銷？ | `has_offers` / `has_savings_data` / `on_sale_count > 0` |
+| MQ6 | 推薦配件？ | `has_accessories` |
+| MQ7 | 哪款目前特價？ | `0 < on_sale_count < len(products)` |
+| MQ8 | 價格區間？ | `len(prices) >= 2 and max > min` |
+| MQ9 | 免運費選項？ | `free_ship_count > 0` |
+
+**多商品類別規格問題（Q3）：**
+
+| 偵測類別（依判斷優先序）| 問題文字 |
+|------------------------|----------|
+| `_is_audio` ← **最優先** | Are there wired or wireless variants? |
+| `_is_tv_monitor` | Are there other screen size options? |
+| `_is_appliance` | Are there other capacity or size options? |
+| `_is_laptop_tablet` | Are there other screen size or storage configurations? |
+| 其餘 | Are there other configurations or sizes? |
+
+### Open Box API 整合
+
+當 Gemini 回應「有翻新品/Open Box？」chip 時呼叫：
+
+```
+GET /beta/products/{sku}/openBox
+```
+
+Server 封裝回傳：
+
+```json
+{
+  "success": true,
+  "has_open_box": true,
+  "sku": "6428324",
+  "product_name": "Apple iPhone 15 Pro",
+  "new_price": 999.99,
+  "offers": [
+    { "condition": "excellent", "open_box_price": 849.99, "regular_price": 999.99 },
+    { "condition": "certified",  "open_box_price": 899.99, "regular_price": 999.99 }
+  ]
+}
+```
+
+- **excellent**：外觀如新，含所有原廠配件，無刮痕
+- **certified**：通過 Geek Squad 認證流程
+
+---
+
+## 11. Best Buy API 欄位擴充
+
+### 搜尋端點（search_by_upc、search_products、advanced_product_search）新增欄位
+
+| 欄位 | 說明 | 用途 |
+|------|------|------|
+| `color` | 商品顏色字串（如 `"Black"`） | Q3/Q4 顏色 chip 判斷 |
+| `condition` | `"new"` / `"refurbished"` / `"pre-owned"` | 翻新品偵測 |
+| `preowned` | boolean | 二手商品標記 |
+| `dollarSavings` | 省幾元（float） | Q2 折扣 chip、Gemini 報價 |
+| `percentSavings` | 省幾% （字串） | Gemini 回答省幾% |
+
+### Detail 端點（get_product_by_sku）額外欄位
+
+| 欄位 | 說明 | 用途 |
+|------|------|------|
+| `warrantyLabor` | 人工保固（如 `"1 Year"`） | SQ1 保固 chip、Pre-fetch 注入 |
+| `warrantyParts` | 零件保固 | SQ1 保固 chip、Pre-fetch 注入 |
+| `productVariations.sku` | 同款其他顏色/配置 SKU 列表 | SQ2 顏色/版本 chip |
+| `features.feature` | 商品功能特色清單 | Gemini 功能問答 |
+| `includedItemList.includedItem` | 盒內附件清單 | SQ5 盒內附件 chip |
+| `accessories.sku/.name` | 相容配件 | SQ6 配件 chip |
+| `offers.id/.text/.type/.startDate/.endDate/.url` | 促銷資訊 | SQ7 優惠 chip |
+| `details.name` | 規格項目名稱（如 `"Product Height With Stand"`） | Pre-fetch 尺寸注入（SQ4）|
+| `details.value` | 規格項目數值（如 `"41.7 inches"`） | Pre-fetch 尺寸注入（SQ4）|
+
+> ⚠️ Nested 欄位（含 `.` 的欄位）**只能加入 detail endpoint** 的 `show=`，搜尋端點加入會導致 **HTTP 400**。  
+> ✅ 例外：`details.name,details.value` 在 filter-style URL（`/v1/products(sku=X)`）可正常使用。
+
+### Pydantic Schema（`schemas/product.py`）對應欄位
+
+```python
+color: Optional[str] = None
+condition: Optional[str] = None                              # "new" | "refurbished" | "pre-owned"
+preowned: Optional[bool] = None
+dollar_savings: Optional[float] = Field(None, alias="dollarSavings")
+percent_savings: Optional[str] = Field(None, alias="percentSavings")
+offers: Optional[List[dict]] = None                          # {id, text, type, startDate, endDate, url}
+warranty_labor: Optional[str] = Field(None, alias="warrantyLabor")
+warranty_parts: Optional[str] = Field(None, alias="warrantyParts")
+product_variations: Optional[List[dict]] = Field(None, alias="productVariations")   # [{sku}]
+features: Optional[List[dict]] = None                        # [{feature: "..."}]
+included_items: Optional[List[dict]] = Field(None, alias="includedItemList")        # [{includedItem: "..."}]
+details: Optional[List[dict]] = None                         # [{name: "Product Height With Stand", value: "41.7 inches"}, ...]
+```
+
+### Gemini `thinkingBudget: 0` 必要設定
+
+Gemini 2.5 Flash 預設開啟 chain-of-thought，會使 function calling 回應返回空白 message 與 0 products。**所有** Gemini API payload 必須加入：
+
+```python
+"generationConfig": {
+    "thinkingConfig": {
+        "thinkingBudget": 0   # 關閉 chain-of-thought → 穩定 function calling，加快回應速度
+    }
+}
+```
+
+---
+
+## 12. 完整請求流程圖
 
 ```
 用戶操作（Android App）
@@ -326,25 +547,36 @@ Round 2: Gemini → 最終文字回應（列出 TV + soundbar）
               │         Call 2: search_products(query) ← 僅在結果 < 3 時
               │    → 把商品列表注入 system instruction
               │
+              ├─ [if message contains "SKU: XXXXXXX"]  ← NEW
+              │    → SKU Detail Pre-fetch
+              │    → get_product_by_sku(sku)
+              │         show=...details.name,details.value,...
+              │    → 解析 details[] → 尺寸/保固/顏色
+              │    → 注入 FULL PRODUCT DETAIL 到 system_instruction
+              │
               ├─ Gemini 2.5 Flash
               │    ├─ 理解用戶意圖
               │    ├─ 呼叫需要的 function（search_products 等）
               │    ├─ [若未觸發 proactive] 自主呼叫 get_complementary_products
-              │    └─ 生成自然語言回應
+              │    └─ 生成自然語言回應（可直接引用 Pre-fetch 注入的規格）
               │
-              └─ Response: { message, products[] }
+              └─ Response: { message, products[], suggested_questions[] }
                     │
                     ▼
               Android ChatActivity
                     ├─ 顯示 AI 訊息泡泡
-                    └─ 若 products[] 不為空：
-                         顯示 Product Cards (RecyclerView)
-                         └─ 可點擊進入 ProductDetailActivity
+                    ├─ 若 products[] 不為空：
+                    │    顯示 Product Cards (RecyclerView)
+                    │    └─ Card 已包含：★ 評分、Sale badge、售價、省多少錢
+                    └─ 若 suggested_questions[] 不為空：
+                         顯示 3 個 Question Chip 按鈕
+                         （單一 SKU：保固→顏色→翻新品→尺寸→盒內→配件）
+                         （多商品：評分→折扣→規格→顏色→促銷→配件）
 ```
 
 ---
 
-## 10. 相關檔案索引
+## 13. 相關檔案索引
 
 ### Android (Kotlin)
 
@@ -362,8 +594,9 @@ Round 2: Gemini → 最終文字回應（列出 TV + soundbar）
 | 檔案 | 說明 |
 |------|------|
 | [app/schemas/chat.py](ucp_server/app/schemas/chat.py) | `UserBehaviorContext` Pydantic schema、`ChatRequest.user_context` |
-| [app/services/chat_service.py](ucp_server/app/services/chat_service.py) | `process_message()`、`_is_accessory_intent()`、Proactive Fetch 邏輯 |
-| [app/services/bestbuy_client.py](ucp_server/app/services/bestbuy_client.py) | `get_complementary_products()`、`CATEGORY_NAME_TO_QUERIES`、`_get_complement_query()` |
-| [app/services/gemini_client.py](ucp_server/app/services/gemini_client.py) | `build_system_instruction()`、`get_complementary_products` function declaration |
+| [app/schemas/product.py](ucp_server/app/schemas/product.py) | `Product` schema — 含 `color`、`preowned`、`warrantyLabor/Parts`、`productVariations`、`features`、`includedItemList`、**`details`**（規格集合）等欄位定義 |
+| [app/services/chat_service.py](ucp_server/app/services/chat_service.py) | `process_message()`（含 **SKU Detail Pre-fetch** 邏輯）、`_is_accessory_intent()`、`_generate_suggested_questions()`（**單商品：保固優先、移除 rating/折扣重複問題、智能去重**；多商品：評分優先）、Proactive Fetch 邏輯 |
+| [app/services/bestbuy_client.py](ucp_server/app/services/bestbuy_client.py) | `get_complementary_products()`、`get_open_box_options()`、`_filter_and_rank_results()`、各端點擴充 `show=` 欄位（`color`、`preowned`、`dollarSavings` 等）；`get_product_by_sku()` 新增 **`details.name,details.value`** 取得完整規格 |
+| [app/services/gemini_client.py](ucp_server/app/services/gemini_client.py) | `build_system_instruction()`、`get_complementary_products` function declaration、ANSWER FROM EXISTING CONTEXT 新增 `color/variations`/`included_items`/`warranty`/`features` 規則 |
 | [app/services/rate_limiter.py](ucp_server/app/services/rate_limiter.py) | 5 req/min 滑動視窗 RateLimiter |
 | [app/api/chat.py](ucp_server/app/api/chat.py) | `/chat` endpoint，傳遞 `user_context` 給 `process_message()` |

@@ -3,6 +3,7 @@ Chat Service
 Manages conversation flow and function execution
 """
 from typing import Dict, Any, List, Optional
+import re
 from app.services.gemini_client import GeminiClient
 from app.services.bestbuy_client import BestBuyAPIClient
 from app.services.cart_service import CartService
@@ -62,13 +63,28 @@ class ChatService:
                         {
                             "sku": p.sku,
                             "name": p.name,
-                            "price": p.sale_price or p.regular_price,
+                            "sale_price": p.sale_price,
+                            "regular_price": p.regular_price,
                             "on_sale": p.on_sale,
-                            "image": p.image
+                            "manufacturer": p.manufacturer,
+                            "image": p.image,
+                            "customer_top_rated": p.customer_top_rated,
+                            "customer_review_average": p.customer_review_average,
+                            "free_shipping": p.free_shipping,
+                            "depth": p.depth,
+                            "height": p.height,
+                            "width": p.width,
+                            "weight": p.weight,
+                            "accessories": p.accessories,
+                            "color": p.color,
+                            "condition": p.condition,
+                            "preowned": p.preowned,
+                            "dollar_savings": p.dollar_savings,
+                            "percent_savings": p.percent_savings,
                         }
                         for p in result.products
                     ]
-                    
+
                     logger.info(f"Formatted {len(products)} products for AI response")
                     
                     return {
@@ -112,7 +128,16 @@ class ChatService:
                         "customer_review_count": product.customer_review_count,
                         "free_shipping": product.free_shipping,
                         "in_store_availability": product.in_store_availability,
-                        "online_availability": product.online_availability
+                        "online_availability": product.online_availability,
+                        "color": product.color,
+                        "condition": product.condition,
+                        "preowned": product.preowned,
+                        "depth": product.depth,
+                        "height": product.height,
+                        "width": product.width,
+                        "weight": product.weight,
+                        "dollar_savings": product.dollar_savings,
+                        "percent_savings": product.percent_savings,
                     }
                 }
             
@@ -135,7 +160,25 @@ class ChatService:
                         "on_sale": product.on_sale,
                         "description": product.short_description or product.long_description,
                         "manufacturer": product.manufacturer,
-                        "image": product.image
+                        "image": product.image,
+                        "customer_review_average": product.customer_review_average,
+                        "customer_review_count": product.customer_review_count,
+                        "color": product.color,
+                        "condition": product.condition,
+                        "preowned": product.preowned,
+                        "depth": product.depth,
+                        "height": product.height,
+                        "width": product.width,
+                        "weight": product.weight,
+                        "dollar_savings": product.dollar_savings,
+                        "percent_savings": product.percent_savings,
+                        "warranty_labor": product.warranty_labor,
+                        "warranty_parts": product.warranty_parts,
+                        "accessories": product.accessories,
+                        "product_variations": product.product_variations,
+                        "features": product.features,
+                        "included_items": product.included_items,
+                        "offers": product.offers,
                     }
                 }
             
@@ -230,11 +273,15 @@ class ChatService:
                     {
                         "sku": p.sku,
                         "name": p.name,
-                        "price": p.sale_price or p.regular_price
+                        "sale_price": p.sale_price,
+                        "regular_price": p.regular_price,
+                        "on_sale": p.on_sale,
+                        "manufacturer": p.manufacturer,
+                        "image": p.image
                     }
                     for p in recommendations[:5]
                 ]
-                
+
                 return {
                     "success": True,
                     "recommendations": products
@@ -243,16 +290,21 @@ class ChatService:
             # Check store availability (BOPIS)
             elif function_name == "check_store_availability":
                 sku = str(arguments.get("sku"))
-                postal_code = arguments.get("postal_code")
+                # Default to a central US ZIP when user hasn't provided one
+                DEFAULT_POSTAL_CODE = "55423"  # Best Buy HQ area, Richfield MN
+                postal_code = arguments.get("postal_code") or DEFAULT_POSTAL_CODE
                 radius = arguments.get("radius", 25)
-                
-                logger.info(f"Checking store availability for SKU {sku} near {postal_code or 'all locations'}")
-                
+                # Gemini can optionally pass a product_name so we skip an extra API call
+                product_name = arguments.get("product_name") or arguments.get("name")
+
+                logger.info(f"Checking store availability for SKU {sku} near {postal_code} (radius: {radius} mi)")
+
                 result = await self.bestbuy_client.get_store_availability(
                     sku=sku,
                     postal_code=postal_code,
                     radius=radius,
-                    max_stores=3  # Reduced to minimize API calls and avoid quota issues
+                    max_stores=1,           # 2 API calls total: 1 store lookup + 1 availability check
+                    product_name=product_name   # avoids an extra API call inside the method
                 )
                 
                 stores = [
@@ -283,8 +335,10 @@ class ChatService:
                     {
                         "sku": p.sku,
                         "name": p.name,
-                        "price": p.sale_price or p.regular_price,
+                        "sale_price": p.sale_price,
+                        "regular_price": p.regular_price,
                         "on_sale": p.on_sale,
+                        "manufacturer": p.manufacturer,
                         "image": p.image
                     }
                     for p in also_bought[:5]
@@ -325,21 +379,40 @@ class ChatService:
                     {
                         "sku": p.sku,
                         "name": p.name,
-                        "price": p.sale_price or p.regular_price,
+                        "sale_price": p.sale_price,
                         "regular_price": p.regular_price,
                         "on_sale": p.on_sale,
                         "manufacturer": p.manufacturer,
-                        "image": p.image
+                        "image": p.image,
+                        "customer_top_rated": p.customer_top_rated,
+                        "customer_review_average": p.customer_review_average,
+                        "free_shipping": p.free_shipping,
+                        "depth": p.depth,
+                        "height": p.height,
+                        "width": p.width,
+                        "weight": p.weight,
+                        "accessories": p.accessories,
+                        "color": p.color,
+                        "condition": p.condition,
+                        "preowned": p.preowned,
+                        "dollar_savings": p.dollar_savings,
+                        "percent_savings": p.percent_savings,
                     }
                     for p in result.products
                 ]
-                
+
                 return {
                     "success": True,
                     "products": products,
                     "total_found": result.total
                 }
-            
+
+            elif function_name == "get_open_box_options":
+                sku = arguments.get("sku")
+                logger.info(f"Checking open box options for SKU: {sku}")
+                result = await self.bestbuy_client.get_open_box_options(str(sku))
+                return result
+
             elif function_name == "search_categories":
                 name = arguments.get("name")
                 
@@ -389,7 +462,7 @@ class ChatService:
                     {
                         "sku": p.sku,
                         "name": p.name,
-                        "price": p.sale_price or p.regular_price,
+                        "sale_price": p.sale_price,
                         "regular_price": p.regular_price,
                         "on_sale": p.on_sale,
                         "manufacturer": p.manufacturer,
@@ -505,6 +578,64 @@ class ChatService:
                 except Exception as e:
                     logger.warning(f"  Proactive fetch failed: {e}")
             # ────────────────────────────────────────────────────────────────────────
+
+            # ── Proactive SKU detail pre-fetch ────────────────────────────────────
+            # When the user's message explicitly contains a SKU (e.g. from a suggestion
+            # chip like "What are the dimensions of X? (SKU: 6578065)"), fetch the full
+            # product detail BEFORE calling Gemini so it has height/depth/weight/etc.
+            # Without this, Gemini only sees the slim `advanced_search` cached data
+            # which often lacks dimension fields.
+            sku_in_message = re.findall(r'\bSKU[:\s#]+(\d{6,8})\b', message, re.IGNORECASE)
+            if sku_in_message:
+                detail_sku = sku_in_message[0]
+                try:
+                    detail_product = await self.bestbuy_client.get_product_by_sku(detail_sku)
+                    if detail_product:
+                        dim_parts = []
+                        # Standard top-level fields first
+                        if detail_product.height: dim_parts.append(f"Height: {detail_product.height}")
+                        if detail_product.width:  dim_parts.append(f"Width: {detail_product.width}")
+                        if detail_product.depth:  dim_parts.append(f"Depth: {detail_product.depth}")
+                        if detail_product.weight: dim_parts.append(f"Weight: {detail_product.weight}")
+                        # Supplement from details[] collection (e.g. "Product Height With Stand": "41.7 inches")
+                        if detail_product.details:
+                            for d in detail_product.details:
+                                dname = (d.get('name') or '').strip()
+                                dval  = (d.get('value') or '').strip()
+                                if dval and any(kw in dname.lower() for kw in ['height', 'depth', 'width', 'weight', 'dimension']):
+                                    entry = f"{dname}: {dval}"
+                                    if entry not in dim_parts:
+                                        dim_parts.append(entry)
+                        dim_text = "\n    ".join(dim_parts) if dim_parts else "Not available"
+                        color_text   = detail_product.color or "Not available"
+                        wl_text      = detail_product.warranty_labor or "Not available"
+                        wp_text      = detail_product.warranty_parts or "Not available"
+                        rating_text  = (
+                            f"{detail_product.customer_review_average} ({detail_product.customer_review_count} reviews)"
+                            if detail_product.customer_review_average else "Not available"
+                        )
+                        price_text = (
+                            f"${detail_product.sale_price} (on sale, was ${detail_product.regular_price})"
+                            if detail_product.on_sale else f"${detail_product.regular_price or detail_product.sale_price}"
+                        )
+                        injection = (
+                            f"\n\n{'═'*70}\n"
+                            f"FULL PRODUCT DETAIL for SKU {detail_sku} ({detail_product.name}):\n"
+                            f"  Price: {price_text}\n"
+                            f"  Dimensions & Weight: {dim_text}\n"
+                            f"  Color: {color_text}\n"
+                            f"  Customer Rating: {rating_text}\n"
+                            f"  Warranty (Labor): {wl_text}\n"
+                            f"  Warranty (Parts): {wp_text}\n"
+                            f"INSTRUCTION: Use ONLY the data above to answer the user's question. "
+                            f"Do NOT say dimensions are unavailable if they appear above.\n"
+                            f"{'═'*70}"
+                        )
+                        system_instruction += injection
+                        logger.info(f"SKU detail pre-fetch: injected full data for SKU {detail_sku} — dims: {dim_text}")
+                except Exception as e:
+                    logger.warning(f"SKU detail pre-fetch failed for SKU {detail_sku}: {e}")
+            # ─────────────────────────────────────────────────────────────────────────
 
             # Call Gemini
             gemini_response = await self.gemini_client.chat(
@@ -637,18 +768,92 @@ class ChatService:
                     seen.add(sku)
                     deduped_products.append(p)
             display_products = deduped_products[:8]
-            
-            logger.info(f"Returning response - message length: {len(ai_message)}, function_calls: {len(return_function_calls)}, function_results: {len(function_results)}, products: {len(display_products)}")
+
+            # ── SKU-focus logic ───────────────────────────────────────────────
+            # When Gemini answers a suggestion question (e.g. "Which has best
+            # rating?"), it replies in plain text calling out a specific SKU.
+            # In that case we want to show ONLY that product card so the user
+            # gets a focused card + targeted follow-up questions.
+            #
+            # Rules:
+            #  1. Extract any explicit "SKU: XXXXXXX" mentions from ai_message.
+            #  2. If the AI calls out 1-2 specific SKUs:
+            #     a. Try to find them in display_products (already fetched).
+            #     b. If not there, fetch via get_product_by_sku (detail endpoint).
+            #     c. Replace display_products with ONLY those SKUs.
+            #  3. If no explicit SKU found → keep display_products as-is.
+            # ─────────────────────────────────────────────────────────────────
+            if ai_message:
+                # Pattern matches "SKU: 6505534" / "(SKU: 6505534)" / "SKU 6505534"
+                sku_matches = re.findall(r'\bSKU[:\s#]+(\d{6,8})\b', ai_message, re.IGNORECASE)
+                unique_skus = list(dict.fromkeys(sku_matches))[:2]   # max 2, preserve order
+
+                if unique_skus:
+                    # Build a lookup of already-fetched products by SKU string
+                    existing_by_sku = {str(p.get("sku", "")): p for p in display_products}
+                    focused: list = []
+
+                    for sku in unique_skus:
+                        if sku in existing_by_sku:
+                            focused.append(existing_by_sku[sku])
+                            logger.info(f"SKU focus: using cached product for SKU {sku}")
+                        else:
+                            # Not in current list — fetch the detail page
+                            try:
+                                product = await self.bestbuy_client.get_product_by_sku(sku)
+                                if product:
+                                    focused.append({
+                                        "sku": product.sku,
+                                        "name": product.name,
+                                        "sale_price": product.sale_price,
+                                        "regular_price": product.regular_price,
+                                        "on_sale": product.on_sale,
+                                        "manufacturer": product.manufacturer,
+                                        "image": product.image,
+                                        "medium_image": product.medium_image,
+                                        "thumbnail_image": product.thumbnail_image,
+                                        "customer_top_rated": product.customer_top_rated,
+                                        "customer_review_average": product.customer_review_average,
+                                        "customer_review_count": product.customer_review_count,
+                                        "free_shipping": product.free_shipping,
+                                        "depth": product.depth,
+                                        "height": product.height,
+                                        "width": product.width,
+                                        "weight": product.weight,
+                                        "accessories": product.accessories,
+                                        "color": product.color,
+                                        "condition": product.condition,
+                                        "preowned": product.preowned,
+                                        "dollar_savings": product.dollar_savings,
+                                        "percent_savings": product.percent_savings,
+                                    })
+                                    logger.info(f"SKU focus: fetched '{product.name}' (SKU {sku})")
+                            except Exception as e:
+                                logger.warning(f"SKU focus: failed to fetch SKU {sku}: {e}")
+
+                    if focused:
+                        display_products = focused
+                        logger.info(f"SKU focus: narrowed display_products to {[p.get('name','?')[:50] for p in focused]}")
+            # ─────────────────────────────────────────────────────────────────
             logger.info(f"Final message preview: '{ai_message[:200]}...'" if len(ai_message) > 200 else f"Final message: '{ai_message}'")
             
             if display_products:
                 logger.info(f"Products to display: {[p.get('name', 'Unknown')[:50] for p in display_products]}")
+
+            # Generate AI-powered follow-up question chips when products are present
+            suggested_questions = []
+            if display_products:
+                suggested_questions = await self._generate_suggested_questions(
+                    user_message=message,
+                    products=display_products
+                )
             
             return {
                 "message": ai_message,
                 "function_calls": return_function_calls,
                 "function_results": function_results,
-                "products": display_products  # Add products to response
+                "products": display_products,
+                "suggested_questions": suggested_questions
             }
             
         except Exception as e:
@@ -658,6 +863,381 @@ class ChatService:
                 "error": str(e)
             }
     
+    async def _generate_suggested_questions(
+        self,
+        user_message: str,
+        products: list,
+        max_questions: int = 3
+    ) -> List[str]:
+        """
+        Generate generic, data-driven follow-up question chips based on the
+        entire products list — NOT tied to a single SKU.
+
+        Question pool (picked dynamically based on actual product data):
+          1.  Most popular / top-rated       → customerTopRated / customerReviewAverage
+          2.  Biggest discount               → regularPrice - salePrice
+          --- SINGLE PRODUCT ---
+          3a. Color / variation options      → productVariations list (other SKU configs)
+          3b. Dimensions / weight            → depth/height/width/weight from context
+          4.  Open box / refurbished         → triggers get_open_box_options
+          5.  What's included in the box     → includedItemList from detail API
+          6.  Warranty information           → warrantyLabor/warrantyParts from detail API
+          --- MULTIPLE PRODUCTS ---
+          3c. Category-specific spec (audio) → Wired or wireless variants?  [BEFORE TV check]
+          3c. Category-specific spec (TV)    → Other screen size options?
+          3c. Category-specific spec (appl.) → Other capacity options?
+          3c. Category-specific spec (laptop)→ Other screen size / storage configs?
+          3c. Category-specific spec (other) → Other configurations or sizes?
+          4.  Color options                  → color field from multiple products
+          --- COMMON ---
+          7.  Special offers / promotions    → offers field + dollarSavings from context
+          8.  Accessories                    → accessories list from Best Buy API
+          9.  Current on-sale items          → onSale == True count
+         10.  Price range                    → spread between cheapest & most expensive
+         11.  Free-shipping options          → freeShipping == True
+        Note: in-store pickup questions are excluded — they trigger slow BOPIS calls.
+        Priority: questions that are backed by real data come first.
+        """
+        if not products:
+            return []
+
+        # ---------- analyse the product list ----------
+        # Top-rated: customerTopRated = True, or highest customerReviewAverage
+        top_rated = [
+            p for p in products
+            if p.get('customer_top_rated') or p.get('customerTopRated')
+        ]
+        rated_products = [
+            p for p in products
+            if p.get('customer_review_average') or p.get('customerReviewAverage')
+        ]
+        best_rated = None
+        if rated_products:
+            best_rated = max(
+                rated_products,
+                key=lambda p: float(p.get('customer_review_average') or p.get('customerReviewAverage') or 0)
+            )
+
+        # Biggest discount (absolute dollar savings)
+        best_deal = None
+        best_savings = 0.0
+        for p in products:
+            reg = p.get('regular_price') or p.get('regularPrice')
+            sale = p.get('sale_price') or p.get('salePrice')
+            try:
+                if reg and sale and float(reg) > float(sale):
+                    savings = float(reg) - float(sale)
+                    if savings > best_savings:
+                        best_savings = savings
+                        best_deal = p
+            except (TypeError, ValueError):
+                pass
+
+        # On-sale count
+        on_sale_count = sum(
+            1 for p in products
+            if p.get('on_sale') or p.get('onSale')
+        )
+
+        # Color variety
+        colors = set()
+        for p in products:
+            c = p.get('color')
+            if c:
+                colors.add(c.strip().lower())
+
+        # Has dimension data (depth / height / width / weight)
+        has_dimensions = any(
+            p.get('depth') or p.get('height') or p.get('width') or p.get('weight')
+            for p in products
+        )
+
+        # Has accessories data
+        has_accessories = any(
+            p.get('accessories') for p in products
+        )
+
+        # Free shipping
+        free_ship_count = sum(
+            1 for p in products
+            if p.get('free_shipping') or p.get('freeShipping')
+        )
+
+        # Has current special offers / promotions (from offers field or prominent savings)
+        has_offers = any(
+            p.get('offers') for p in products
+        )
+        has_savings_data = best_savings > 5.0  # only highlight if savings > $5
+
+        # Has condition data flagging refurbished / pre-owned products
+        has_condition_info = any(
+            p.get('condition') and p.get('condition', '').lower() != 'new'
+            for p in products
+        )
+
+        # Has product variation data (other colors / configs) — from detail endpoint
+        has_variations = any(
+            p.get('product_variations') for p in products
+        )
+
+        # Has warranty information
+        has_warranty = any(
+            p.get('warranty_labor') or p.get('warranty_parts')
+            for p in products
+        )
+
+        # Has "what's in the box" data
+        has_included_items = any(
+            p.get('included_items') for p in products
+        )
+
+        # Has product features list
+        has_features = any(
+            p.get('features') for p in products
+        )
+
+        # Price range
+        prices = []
+        for p in products:
+            price = p.get('sale_price') or p.get('salePrice') or \
+                    p.get('regular_price') or p.get('regularPrice')
+            try:
+                if price:
+                    prices.append(float(price))
+            except (TypeError, ValueError):
+                pass
+
+        # Derive a short search topic from user_message (≤ 3 content words).
+        # Strip common question-word prefixes first so that when the user taps a
+        # suggested question as their next message the topic stays clean.
+        # e.g. "Which Wifi router has the biggest discount?" → "Wifi router"
+        #      "Are any LG refrigerator models on sale?"    → "LG refrigerator"
+        _Q_PREFIX = re.compile(
+            r'^(?:which|are\s+(?:any\s+)?(?:there\s+)?|can\s+i(?:\s+buy|\s+get)?'
+            r'|what(?:\s+is|\s+are|\s+color|\s+\'s)?|do\s+any(?:\s+of\s+these)?'
+            r'|is\s+(?:the|any)|how(?:\s+much|\s+many)?)\s+',
+            re.IGNORECASE
+        )
+        _STOP_AT = {
+            'has', 'have', 'is', 'are', 'be', 'come', 'comes',
+            'options', 'models', 'model', 'option', 'currently',
+            'available', 'right', 'now', 'with', 'between',
+        }
+        cleaned = _Q_PREFIX.sub('', user_message.strip())
+        topic_parts: List[str] = []
+        for raw in cleaned.split():
+            w = raw.strip('?.,!').lower()
+            if not w:
+                continue
+            if w in _STOP_AT:
+                break
+            topic_parts.append(raw.strip('?.,!'))
+            if len(topic_parts) >= 3:
+                break
+        topic = " ".join(topic_parts) if topic_parts else "these products"
+
+        # Override topic with real product names so suggestions are always meaningful.
+        # A topic derived from the user message can be a single pronoun (e.g. "I", "it")
+        # or fragment when the user asks a follow-up on an already-found product.
+        _single_product = len(products) == 1  # pre-compute for topic override & later use
+        if _single_product:
+            _pname = (products[0].get('name') or '').strip()
+            if _pname:
+                # Strip trailing carrier / variant in parentheses: "iPhone 17 (AT&T)" → "iPhone 17"
+                _pname_clean = re.sub(r'\s*\([^)]*\)\s*$', '', _pname).strip()
+                # Strip leading "Manufacturer - " prefix: "Apple - iPhone 17" → "iPhone 17"
+                _pname_clean = re.sub(r'^[^-]+-\s*', '', _pname_clean).strip()
+                # Limit to 45 chars, break at last space
+                if len(_pname_clean) > 45:
+                    _pname_clean = _pname_clean[:45].rsplit(' ', 1)[0]
+                topic = _pname_clean if _pname_clean else _pname[:45]
+        else:
+            # For multi-product, protect against degenerate topics (pronouns / single letters)
+            _bad_topic = len(topic) < 3 or topic.lower() in {
+                'i', 'it', 'me', 'we', 'the', 'a', 'an', 'these', 'those', 'this', 'that'
+            }
+            if _bad_topic:
+                _manufacturers = list({
+                    (p.get('manufacturer') or '').strip()
+                    for p in products
+                    if p.get('manufacturer')
+                })
+                if len(_manufacturers) == 1 and _manufacturers[0]:
+                    topic = _manufacturers[0]
+                else:
+                    topic = "these products"
+
+        # ---------- detect product category from topic + product names ----------
+        _all_text = (user_message + " " + " ".join(
+            p.get('name', '') for p in products
+        )).lower()
+
+        _is_tv_monitor = any(w in _all_text for w in [
+            'tv', 'television', 'monitor', 'display', 'oled', 'qled', 'screen',
+            'inch class', '" class', 'class led', 'class oled', 'class qled'
+        ])
+        _is_appliance = any(w in _all_text for w in [
+            'refrigerator', 'fridge', 'washer', 'dryer', 'dishwasher',
+            'microwave', 'range', 'oven', 'cooktop', 'freezer', 'cu. ft'
+        ])
+        _is_laptop_tablet = any(w in _all_text for w in [
+            'laptop', 'macbook', 'notebook', 'chromebook', 'tablet', 'ipad',
+            'surface pro', 'inch laptop', '" laptop'
+        ])
+        _is_audio = any(w in _all_text for w in [
+            'headphone', 'earphone', 'earbud', 'airpod', 'speaker',
+            'soundbar', 'sound bar', 'headset'
+        ])
+
+        # ---------- build the question pool (ordered by relevance) ----------
+        pool: List[str] = []
+
+        # ── SINGLE PRODUCT ──────────────────────────────────────────────────────
+        # Product card already shows: ★ rating, sale badge, price, savings amount.
+        # So skip "rating" and "on sale?" questions — they're redundant.
+        # Instead surface deeper purchase-decision info the user can't see at a glance.
+        if _single_product:
+            _dim_keywords = [
+                'dimension', 'weight', 'height', 'width', 'depth',
+                'size', 'how big', 'how heavy', 'measurements'
+            ]
+            _warranty_keywords = ['warrant', 'guarantee', 'coverage']
+            _open_box_keywords = ['open box', 'refurb', 'pre-owned', 'preowned', 'used', 'second hand']
+            _color_keywords = ['color', 'colour', 'finish', 'variant', 'configuration']
+            _included_keywords = ["what's included", "in the box", "comes with", "included"]
+
+            _already_asked_dims     = any(kw in user_message.lower() for kw in _dim_keywords)
+            _already_asked_warranty = any(kw in user_message.lower() for kw in _warranty_keywords)
+            _already_asked_openbox  = any(kw in user_message.lower() for kw in _open_box_keywords)
+            _already_asked_color    = any(kw in user_message.lower() for kw in _color_keywords)
+            _already_asked_included = any(kw in user_message.lower() for kw in _included_keywords)
+
+            # SQ1: Warranty — most valuable for high-ticket electronics/appliances
+            if not _already_asked_warranty:
+                pool.append(f"What warranty does the {topic} come with?")
+
+            # SQ2: Color / other configurations
+            if not _already_asked_color:
+                if has_variations:
+                    pool.append(
+                        f"Are there other colors or configurations available for the {topic}?"
+                    )
+                else:
+                    pool.append(
+                        f"Does the {topic} come in other colors or finish options?"
+                    )
+
+            # SQ3: Open box / refurbished / pre-owned
+            if not _already_asked_openbox:
+                pool.append(
+                    f"Are there open box, refurbished, or pre-owned versions of the {topic} available at a lower price?"
+                )
+
+            # SQ4: Dimensions / weight (skip if user just asked this)
+            if not _already_asked_dims:
+                pool.append(f"What are the dimensions and weight of the {topic}?")
+
+            # SQ5: What's included in the box
+            if not _already_asked_included:
+                if has_included_items:
+                    pool.append(f"What comes in the box with the {topic}?")
+                else:
+                    pool.append(f"What's included in the box with the {topic}?")
+
+            # SQ6: Accessories
+            if has_accessories:
+                pool.append(f"What accessories are compatible with the {topic}?")
+            else:
+                pool.append(f"Are there recommended accessories for the {topic}?")
+
+            # SQ7: Special offers (only when explicit offers data present — not visible on card)
+            if has_offers:
+                pool.append(
+                    f"What current special offers or deals are available for the {topic}?"
+                )
+
+        # ── MULTIPLE PRODUCTS ───────────────────────────────────────────────────
+        else:
+            # MQ1: Rating / popularity
+            if best_rated:
+                pool.append(f"Which of these {topic} has the best customer rating?")
+            else:
+                pool.append(f"Which of these {topic} is the most popular?")
+
+            # MQ2: Biggest discount
+            if best_deal and best_savings > 0:
+                pool.append(f"Which {topic} has the biggest discount right now?")
+
+            # MQ3: Category-specific spec comparison (check audio before TV to avoid false positive)
+            if _is_audio:
+                pool.append(f"Are there wired or wireless variants of the {topic}?")
+            elif _is_tv_monitor:
+                pool.append(f"Are there other screen size options for the {topic}?")
+            elif _is_appliance:
+                pool.append(f"Are there other capacity or size options for the {topic}?")
+            elif _is_laptop_tablet:
+                pool.append(f"Are there other screen size or storage configurations for the {topic}?")
+            else:
+                pool.append(f"Are there other configurations or sizes available for {topic}?")
+
+            # MQ4: Color options
+            if len(colors) >= 2:
+                pool.append(f"What color or finish options are available for {topic}?")
+            elif len(products) >= 2:
+                pool.append(f"Are there different color or finish options for {topic}?")
+
+            # MQ5: Current special offers / promotions
+            if has_offers:
+                pool.append(f"What current special offers or deals are available for the {topic}?")
+            elif has_savings_data or on_sale_count > 0:
+                pool.append(f"Are there any current promotional offers or discounts on {topic}?")
+            else:
+                pool.append(f"Are there any current special offers or deals on {topic}?")
+
+            # MQ6: Accessories
+            if has_accessories:
+                pool.append(f"What accessories are compatible with the {topic}?")
+            else:
+                pool.append(f"Are there recommended accessories for the {topic}?")
+
+            # MQ7: Are any on sale?
+            if on_sale_count > 0 and on_sale_count < len(products):
+                pool.append(f"Which {topic} options are currently on sale?")
+            elif on_sale_count == 0:
+                pool.append(f"Are any {topic} models currently on sale or discounted?")
+
+            # MQ8: Price range
+            if len(prices) >= 2:
+                low, high = min(prices), max(prices)
+                if high > low:
+                    pool.append(
+                        f"What is the price range for {topic} — from ${low:,.0f} to ${high:,.0f}?"
+                    )
+
+            # MQ9: Free shipping
+            if free_ship_count > 0:
+                pool.append(f"Do any of these {topic} options come with free shipping?")
+
+        # Deduplicate and return top N
+        seen: set = set()
+        result: List[str] = []
+        for q in pool:
+            if q not in seen:
+                seen.add(q)
+                result.append(q)
+            if len(result) >= max_questions:
+                break
+
+        # For single-product responses, append "(SKU: XXXXX)" to each question so
+        # that Gemini can immediately resolve the product without asking the user.
+        # The system prompt already knows to extract and use the SKU from this suffix.
+        if _single_product:
+            sku = str(products[0].get('sku') or products[0].get('SKU') or '').strip()
+            if sku:
+                result = [f"{q} (SKU: {sku})" for q in result]
+
+        return result
+
     def _is_accessory_intent(self, message: str) -> bool:
         """
         Return True if the user's message expresses intent to find accessories,

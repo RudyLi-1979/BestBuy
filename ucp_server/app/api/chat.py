@@ -82,7 +82,8 @@ async def chat(
             message=result["message"],
             session_id=session_id,
             function_calls=result.get("function_calls"),
-            products=result.get("products")  # Add products to response
+            products=result.get("products"),
+            suggested_questions=result.get("suggested_questions")
         )
         
         logger.info(f"Chat response sent for session {session_id}")

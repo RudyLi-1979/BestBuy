@@ -80,6 +80,10 @@ class ChatResponse(BaseModel):
     session_id: str = Field(..., description="Session ID")
     function_calls: Optional[List[FunctionCall]] = Field(None, description="Function calls made by AI")
     products: Optional[List[ProductSimple]] = Field(None, description="Product recommendations to display in the chat")
+    suggested_questions: Optional[List[str]] = Field(
+        None,
+        description="AI-generated follow-up questions shown as tappable chips (max 3)"
+    )
     
     class Config:
         json_schema_extra = {

@@ -43,20 +43,29 @@ class ChatProductAdapter(
             
             // Price formatting
             val priceFormat = NumberFormat.getCurrencyInstance(Locale.US)
-            val price = product.salePrice ?: product.regularPrice
-            if (price != null) {
-                binding.tvPrice.text = priceFormat.format(price)
-                
-                // Show sale indicator if on sale
-                if (product.onSale == true && product.salePrice != null && product.regularPrice != null) {
-                    val savings = product.regularPrice - product.salePrice
-                    if (savings > 0) {
-                        // Could add a sale badge here if needed
-                        binding.tvPrice.text = "${priceFormat.format(product.salePrice)} (Save ${priceFormat.format(savings)})"
-                    }
-                }
+            val salePrice = product.salePrice
+            val regularPrice = product.regularPrice
+            val isOnSale = product.onSale == true && salePrice != null && regularPrice != null && regularPrice > salePrice
+
+            if (isOnSale) {
+                // Sale price (bold, black)
+                binding.tvPrice.text = priceFormat.format(salePrice)
+
+                // Original price with strikethrough
+                binding.tvOriginalPrice.text = priceFormat.format(regularPrice)
+                binding.tvOriginalPrice.paintFlags =
+                    binding.tvOriginalPrice.paintFlags or android.graphics.Paint.STRIKE_THRU_TEXT_FLAG
+                binding.tvOriginalPrice.visibility = android.view.View.VISIBLE
+
+                // Red sale badge: "Save $X"
+                val savings = regularPrice!! - salePrice!!
+                binding.tvSaleBadge.text = "Save ${priceFormat.format(savings)}"
+                binding.tvSaleBadge.visibility = android.view.View.VISIBLE
             } else {
-                binding.tvPrice.text = "Price not available"
+                val price = salePrice ?: regularPrice
+                binding.tvPrice.text = if (price != null) priceFormat.format(price) else "Price not available"
+                binding.tvOriginalPrice.visibility = android.view.View.GONE
+                binding.tvSaleBadge.visibility = android.view.View.GONE
             }
             
             // Product image
@@ -74,6 +83,18 @@ class ChatProductAdapter(
             // Click listener - open ProductDetailActivity
             binding.root.setOnClickListener {
                 onItemClick(product)
+            }
+
+            // Star rating + sale badge visibility
+            // ratingRow is always visible to keep consistent card height
+            val rating = product.customerReviewAverage
+            if (rating != null && rating > 0.0) {
+                binding.tvStarIcon.visibility = android.view.View.VISIBLE
+                binding.tvRating.text = String.format("%.1f", rating)
+                binding.tvRating.visibility = android.view.View.VISIBLE
+            } else {
+                binding.tvStarIcon.visibility = android.view.View.INVISIBLE
+                binding.tvRating.visibility = android.view.View.GONE
             }
         }
     }

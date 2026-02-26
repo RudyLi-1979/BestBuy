@@ -62,21 +62,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val aiContent = when {
                         // If message is not empty, use it
                         response.message.isNotBlank() -> response.message
-                        
-                        // If message is empty but there are function calls, show a temporary message
+
+                        // Products present — no need for any fallback text; the cards speak for themselves
+                        !response.products.isNullOrEmpty() -> ""
+
+                        // No products: show a function-specific hint so the UI isn't completely blank
                         !response.functionCalls.isNullOrEmpty() -> {
                             val functionName = response.functionCalls.first().name
                             when (functionName) {
-                                "search_by_upc" -> "正在查詢產品資訊..."
-                                "search_products" -> "正在搜尋產品..."
-                                "add_to_cart" -> "正在加入購物車..."
-                                "view_cart" -> "正在查看購物車..."
-                                else -> "正在處理您的請求..."
+                                "add_to_cart" -> "Adding to cart..."
+                                "view_cart" -> "Loading your cart..."
+                                else -> ""
                             }
                         }
-                        
-                        // If both are empty, show a default message
-                        else -> "收到您的訊息"
+
+                        // Fallback
+                        else -> "Got your message"
                     }
                     
                     // Add AI response to UI
@@ -84,7 +85,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         role = "assistant",
                         content = aiContent,
                         products = response.products,
-                        functionCall = response.functionCalls?.firstOrNull()
+                        functionCall = response.functionCalls?.firstOrNull(),
+                        suggestedQuestions = response.suggestedQuestions
                     )
                     _messages.value = _messages.value + aiMessage
                     

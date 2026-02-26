@@ -4,9 +4,11 @@ import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
 import com.bestbuy.scanner.R
 import com.bestbuy.scanner.data.model.ChatMessage
 import com.bestbuy.scanner.data.model.Product
@@ -21,6 +23,9 @@ class ChatAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     
     private val messages = mutableListOf<ChatMessage>()
     private val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+    /** Called when a suggested follow-up question chip is tapped */
+    var onSuggestionClick: ((String) -> Unit)? = null
     
     companion object {
         private const val VIEW_TYPE_USER = 1
@@ -97,15 +102,26 @@ class ChatAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     inner class AIMessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageText: TextView = itemView.findViewById(R.id.messageText)
         private val timestampText: TextView = itemView.findViewById(R.id.timestampText)
+        private val recommendationHeader: android.widget.LinearLayout = itemView.findViewById(R.id.recommendationHeader)
         private val productsRecyclerView: RecyclerView = itemView.findViewById(R.id.productsRecyclerView)
+        private val suggestedQuestionsChipGroup: LinearLayout = itemView.findViewById(R.id.suggestedQuestionsChipGroup)
         
         fun bind(message: ChatMessage) {
-            messageText.text = message.content
-            timestampText.text = dateFormat.format(Date(message.timestamp))
-            
+            // Hide text bubble completely when content is blank (e.g. response only has product cards)
+            if (message.content.isBlank()) {
+                messageText.visibility = View.GONE
+                timestampText.visibility = View.GONE
+            } else {
+                messageText.visibility = View.VISIBLE
+                timestampText.visibility = View.VISIBLE
+                messageText.text = message.content
+                timestampText.text = dateFormat.format(Date(message.timestamp))
+            }
+
             // Display product cards if message contains products
             message.products?.let { products ->
                 if (products.isNotEmpty()) {
+                    recommendationHeader.visibility = View.VISIBLE
                     productsRecyclerView.visibility = View.VISIBLE
                     
                     // Setup horizontal RecyclerView for product cards
@@ -128,10 +144,51 @@ class ChatAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                     productsRecyclerView.adapter = productAdapter
                     productAdapter.submitList(products)
                 } else {
+                    recommendationHeader.visibility = View.GONE
                     productsRecyclerView.visibility = View.GONE
                 }
             } ?: run {
+                recommendationHeader.visibility = View.GONE
                 productsRecyclerView.visibility = View.GONE
+            }
+
+            // Display AI-generated suggested follow-up question chips
+            val questions = message.suggestedQuestions
+            if (!questions.isNullOrEmpty()) {
+                suggestedQuestionsChipGroup.removeAllViews()
+                val context = itemView.context
+                val blueInt = androidx.core.content.ContextCompat.getColor(context, R.color.bestbuy_blue)
+                val bgColor = androidx.core.content.ContextCompat.getColor(context, R.color.chip_bg)
+                val dp6 = (context.resources.displayMetrics.density * 6).toInt()
+                val dp12 = (context.resources.displayMetrics.density * 12).toInt()
+
+                questions.forEach { question ->
+                    val btn = MaterialButton(
+                        context,
+                        null,
+                        com.google.android.material.R.attr.materialButtonOutlinedStyle
+                    ).apply {
+                        text = question
+                        textSize = 13f
+                        isSingleLine = false  // native multi-line support
+                        setTextColor(blueInt)
+                        backgroundTintList = android.content.res.ColorStateList.valueOf(bgColor)
+                        strokeColor = android.content.res.ColorStateList.valueOf(blueInt)
+                        strokeWidth = (context.resources.displayMetrics.density * 1.5f).toInt()
+                        cornerRadius = (context.resources.displayMetrics.density * 20).toInt()
+                        setPadding(dp12, dp6, dp12, dp6)
+                        setOnClickListener { onSuggestionClick?.invoke(question) }
+                    }
+
+                    val lp = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).also { it.bottomMargin = dp6 }
+                    suggestedQuestionsChipGroup.addView(btn, lp)
+                }
+                suggestedQuestionsChipGroup.visibility = View.VISIBLE
+            } else {
+                suggestedQuestionsChipGroup.visibility = View.GONE
             }
         }
     }

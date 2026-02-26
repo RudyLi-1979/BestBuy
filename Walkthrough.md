@@ -1,6 +1,6 @@
 # Walkthrough: BestBuy Scanner App Development
 
-## Latest Completion: Chat Product Card Persistence & UI Enhancement (2026-02-24)
+## Latest Completion: Recommendation Chips Enhancement & Best Buy Detail API Fields (2026-02-25)
 
 ### Feature Overview
 Successfully restructured the application to a **Chat-First Architecture**, integrated **Gemini 2.5 Flash AI** and local **UCP Server** to provide intelligent conversational shopping experience.
@@ -457,6 +457,113 @@ cd c:\Users\rudy\AndroidStudioProjects\BestBuy
 | `ChatActivity.kt` | 修改 | Toolbar 設定、badge/total 更新 |
 | `activity_cart.xml` | 修改 | 新增 tvItemCount、bottomBar 永遠顯示 |
 | `CartActivity.kt` | 修改 | setupObservers 永遠顯示底部總結列 |
+
+---
+
+## Recommendation Chips Enhancement & Best Buy Detail API Fields (2026-02-25)
+
+### Completed Items
+
+#### 1. 新增 Best Buy Detail API 欄位整合
+
+依照 [Best Buy API Documentation — Detail](https://bestbuyapis.github.io/api-documentation/#detail)，識別並整合以下新欄位：
+
+**搜尋端點（`search_by_upc`、`search_products`、`advanced_product_search`）新增：**
+- `color` — 商品顏色字串
+- `condition` — `"new"` / `"refurbished"` / `"pre-owned"`
+- `preowned` — 二手商品 boolean
+- `dollarSavings` / `percentSavings` — 省多少錢 / %
+
+**Detail 端點（`get_product_by_sku`）額外新增：**
+- `warrantyLabor` / `warrantyParts` — 人工 / 零件保固說明
+- `productVariations.sku` — 同款其他顏色/配置 SKU 列表
+- `features.feature` — 功能特色清單
+- `includedItemList.includedItem` — 盒內附件清單
+- `offers.*` — 促銷活動資訊
+- `categoryPath` — 類別層級路徑
+
+> ⚠️ Nested 欄位（含 `.`）**只能加到 Detail endpoint**；搜尋端點加入會返回 HTTP 400。
+
+**修改檔案:**
+- [`ucp_server/app/schemas/product.py`](ucp_server/app/schemas/product.py) — 新增 `color`、`preowned`、`warranty_labor`、`warranty_parts`、`product_variations`、`features`、`included_items`、`offers` 欄位（含 alias）
+- [`ucp_server/app/services/bestbuy_client.py`](ucp_server/app/services/bestbuy_client.py) — 所有 4 個端點的 `show=` 參數更新；`get_product_by_sku` 加入所有 nested 欄位
+
+---
+
+#### 2. 重新設計 `_generate_suggested_questions()`：單商品 vs 多商品路徑
+
+Chips 生成邏輯完全重寫，依商品數量走不同分支：
+
+**單商品路徑（掃描條碼或精確型號）：**
+
+| Chip | 資料來源 |
+|------|---------|
+| 其他顏色/版本？ | `product_variations`（有資料才顯示）|
+| 尺寸與重量？ | `depth/height/width/weight` |
+| 有 Open Box / 翻新品？ | 觸發 `get_open_box_options(sku)` |
+| 盒內附件？ | `includedItemList` |
+| 保固說明？ | `warrantyLabor` / `warrantyParts`（電器/筆電/TV 優先顯示）|
+| 目前有優惠？ | `offers` / `dollarSavings` |
+| 推薦配件？ | `accessories` |
+
+**多商品路徑（關鍵字搜尋）：**
+1. 哪款評分最高？
+2. 哪款折扣最大？
+3. **類別規格問題**（依 `_is_audio` → `_is_tv_monitor` → `_is_appliance` → `_is_laptop_tablet` 優先序）
+4. 顏色/外觀選項？
+5. 促銷優惠？
+6. 配件？
+
+**修改檔案:**
+- [`ucp_server/app/services/chat_service.py`](ucp_server/app/services/chat_service.py) — 全面重寫 `_generate_suggested_questions()`；新增 `has_variations`、`has_warranty`、`has_included_items`、`has_offers` 偵測變數；所有 handler 的 product dict 加入新欄位
+
+---
+
+#### 3. Bug Fix：`_is_audio` 前置於 `_is_tv_monitor`
+
+**問題**: Sony WH-1000XM5 耳機搜尋結果出現「其他螢幕尺寸？」chip，而非「有線或無線版本？」  
+**根本原因**: 耳機商品名稱含 `screen`（如 "noise cancelling + companion screen"），`_is_tv_monitor` 判斷先於 `_is_audio`，誤觸第一個類別分支  
+**解決方案**: 在 `_generate_suggested_questions()` 的偵測鏈中，`_is_audio` 之檢查**移至** `_is_tv_monitor` 之前
+
+---
+
+#### 4. Bug Fix：多商品結果 Chip 顏色問題先於類別規格問題
+
+**問題**: Samsung 65" QLED TV 搜尋後 Q3 顯示「顏色選項？」而非「其他螢幕尺寸？」  
+**根本原因**: 舊版 pool 中顏色 chip (Q3) 排在類別規格 chip (Q4) 之前  
+**解決方案**: 多商品 pool 重新排序——類別規格問題排第 3，顏色選項排第 4
+
+---
+
+#### 5. Gemini 系統提示擴充（ANSWER FROM EXISTING CONTEXT）
+
+在 `gemini_client.py` 的 system instruction 中新增以下 context 讀取規則：
+
+- **顏色/版本問題** → 讀取 `color` 欄位；有 `product_variations` 時列出其他 SKU；用戶問特定版本價格才呼叫 `get_product_details`
+- **盒內附件問題** → 讀取 `included_items` 清單（每筆 `{includedItem: "..."}`）；若缺失才呼叫 `get_product_details`
+- **保固問題** → 讀取 `warranty_labor` + `warranty_parts`；若缺失才呼叫 `get_product_details`
+- **功能/規格問題** → 讀取 `features` 清單（每筆 `{feature: "..."}`）；若缺失才呼叫 `get_product_details`
+- **二手/翻新** → 讀取 `preowned` boolean、`condition` 欄位
+
+**修改檔案:**
+- [`ucp_server/app/services/gemini_client.py`](ucp_server/app/services/gemini_client.py)
+
+---
+
+### 技術亮點
+- **Pure Python Chips，零 LLM overhead**：`_generate_suggested_questions()` 直接讀 product dict，p99 < 1ms
+- **Detail-only nested fields**：正確遵循 Best Buy API 限制，避免 HTTP 400
+- **類別偵測優先序**：`_is_audio` > `_is_tv_monitor` 防止關鍵字碰撞
+- **Open Box / preowned 整合**：單商品頁新增 Open Box chip，自動呼叫 `GET /beta/products/{sku}/openBox`
+
+### 檔案變更清單
+
+| 檔案 | 類型 | 說明 |
+|------|------|------|
+| `ucp_server/app/schemas/product.py` | 修改 | 新增 7 個 API 欄位（color、preowned、warranty、variations、features、included_items、offers）|
+| `ucp_server/app/services/bestbuy_client.py` | 修改 | 4 個端點 `show=` 更新；detail endpoint 新增所有 nested 欄位 |
+| `ucp_server/app/services/chat_service.py` | 修改 | `_generate_suggested_questions()` 完全重寫；all handler dicts 更新 |
+| `ucp_server/app/services/gemini_client.py` | 修改 | ANSWER FROM EXISTING CONTEXT 新增 color/warranty/features/included_items 規則 |
 
 ---
 

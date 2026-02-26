@@ -31,6 +31,40 @@
         app:layout_constraintTop_toBottomOf="@+id/messageText"
         tools:text="10:30 AM" />
 
+    <!-- Recommendation header: "Recommended for you" + subtitle -->
+    <LinearLayout
+        android:id="@+id/recommendationHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="16dp"
+        android:orientation="vertical"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/timestampText"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/tvRecommendedTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Recommended for you"
+            android:textColor="@android:color/black"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvRecommendedSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Inspired by your shopping history"
+            android:textColor="@android:color/darker_gray"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
     <!-- Product cards RecyclerView (horizontal scrolling) -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/productsRecyclerView"
@@ -46,9 +80,24 @@
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/timestampText"
+        app:layout_constraintTop_toBottomOf="@+id/recommendationHeader"
         tools:itemCount="3"
         tools:listitem="@layout/item_product_recommendation"
+        tools:visibility="visible" />
+
+    <!-- Suggested follow-up questions (AI-generated buttons) -->
+    <LinearLayout
+        android:id="@+id/suggestedQuestionsChipGroup"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="8dp"
+        android:orientation="vertical"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/productsRecyclerView"
         tools:visibility="visible" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
