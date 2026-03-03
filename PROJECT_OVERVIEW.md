@@ -71,7 +71,7 @@ An intelligent shopping assistant Android application that combines barcode scan
 │ - Docker Containerized            │
 └──────────┬────────────────────────┘
            │ HTTPS (REST API)
-           │ Rate Limit: 5 req/s
+           │ Rate Limit: 5 req/min
 ┌──────────▼────────────────────────┐
 │  Best Buy Developer API (Service) │
 │ - Product Information             │
@@ -320,12 +320,19 @@ User sees: Store locations, distance, availability
 - **Hot Reload**: Code changes automatically reflected without restart
 - **Data Persistence**: SQLite database and keys survive container restarts
 
+### 5. Suggested Question Chips
+- **AI-Generated**: `_generate_suggested_questions()` produces up to 3 context-aware chips per response
+- **Data-Driven**: Only generates questions backed by real product fields (warranty, colors, dimensions, offers)
+- **SKU Injection**: Single-product chips embed `(SKU: XXXXX)` so follow-up queries resolve without re-asking
+- **Category-Aware**: Detects TV/Monitor, Audio, Appliance, Laptop categories for tailored spec questions
+- **Redundancy Avoidance**: Skips questions already answered on visible product card (price, rating, sale badge)
+
 ---
 
 ## Performance Metrics
 
 ### API Rate Limits
-- **Best Buy API**: 5 requests/second, 50,000 requests/day
+- **Best Buy API**: 5 requests/minute, 50,000 requests/day
 - **RateLimiter**: Automatic throttling to prevent quota exhaustion
 - **Retry Logic**: Exponential backoff on rate limit errors
 
@@ -430,6 +437,6 @@ Gemini API (External)
 
 ---
 
-**Last Updated**: February 25, 2026  
-**Version**: 1.1.0  
+**Last Updated**: March 3, 2026  
+**Version**: 1.2.0  
 **License**: Educational Use Only

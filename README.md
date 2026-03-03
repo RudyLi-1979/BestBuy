@@ -39,6 +39,10 @@ A full-featured **Chat-First** Android shopping application that integrates **Ge
   - Data persistence (using Room Database)
   - **Toolbar Cart Icon**: Displays live item count (badge) + total price below icon in ChatActivity
   - **Always-Visible Cart Summary**: Bottom bar in CartActivity always shows item count + total (0 items / $0.00 when empty)
+- 💡 **Suggested Question Chips**: AI-generated tappable follow-up question chips displayed below product cards
+  - Single product: warranty, color/config, open box, dimensions, what's in the box, accessories
+  - Multiple products: best rating, biggest discount, category-specific specs, color options, price range
+  - Chips for single-product responses embed `(SKU: XXXXX)` so Gemini resolves context without re-asking
 - 🏪 **Store Inventory Check**: Check product inventory at nearby physical stores (BOPIS)
 - 🛍️ **Also Bought Recommendations**: Displays items frequently bought together
 - � **Chat History Persistence**: Product cards in chat messages survive app restarts
@@ -60,7 +64,7 @@ A full-featured **Chat-First** Android shopping application that integrates **Ge
 - **Barcode Scanning**: ML Kit Barcode Scanning
 - **Networking**: Retrofit + OkHttp
 - **Image Loading**: Glide
-- **Data Persistence**: Room Database v3
+- **Data Persistence**: Room Database v4
 - **Asynchronous Processing**: Kotlin Coroutines + Flow
 - **Dependency Injection**: Manual DI
 
@@ -89,7 +93,7 @@ A full-featured **Chat-First** Android shopping application that integrates **Ge
 │   │   │   ├── ChatMessageDao.kt         # Chat Message Data Access Object
 │   │   │   └── UserInteractionDao.kt     # User Interaction Data Access Object
 │   │   ├── database/
-│   │   │   └── AppDatabase.kt            # Room Database (v3)
+│   │   │   └── AppDatabase.kt            # Room Database (v4)
 │   │   ├── model/
 │   │   │   ├── Product.kt                # Product Data Model
 │   │   │   ├── CartItem.kt               # Cart Item Data Model
@@ -395,6 +399,20 @@ A: BestBuy API does not have recommendation data for all products, this is norma
 
 ## Latest Updates
 
+### ✨ Recommendation Display & Suggested Questions (2026-03-03)
+
+**Recommendation Fixes:**
+- ✅ **max_results default changed**: `2 → 5` — search results now return 5 products by default
+- ✅ **alsoViewed / alsoBought pageSize**: Added `pageSize=10` to both Best Buy recommendation API calls
+- ✅ **SKU-focus limit raised**: `[:2] → [:8]` — AI responses mentioning 3+ SKUs now show all referenced product cards
+
+**Suggested Question Chips:**
+- ✅ AI generates up to 3 context-aware follow-up question chips after each product response
+- ✅ Single-product chips append `(SKU: XXXXX)` for seamless Gemini resolution
+- ✅ Data-driven selection: only generates questions backed by real product data
+- ✅ Category-aware: TV/Monitor → screen size; Audio → wired/wireless; Appliance → capacity
+- ✅ Avoids redundant questions already visible on product card (rating, sale badge, price)
+
 ### ✨ Chat-First Architecture Restructure + UCP Server Integration (2026-02-13)
 
 **Chat Mode Becomes Main Feature:**
@@ -440,6 +458,8 @@ Successfully implemented a personalized recommendation system based on user beha
 ## Future Improvements
 
 - [x] Personalized recommendation system (Phase 1 completed)
+- [x] Suggested question chips (context-aware AI follow-up questions)
+- [x] SKU-focus product cards (display all products mentioned in AI response)
 - [ ] Collaborative filtering recommendations (Phase 2)
 - [ ] Machine learning model integration (Phase 3)
 - [ ] Add product comparison feature

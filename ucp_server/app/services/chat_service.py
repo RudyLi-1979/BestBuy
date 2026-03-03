@@ -50,7 +50,7 @@ class ChatService:
             # Product search
             if function_name == "search_products":
                 query = arguments.get("query")
-                max_results = arguments.get("max_results", 2)  # Reduced default from 5 to 2 to conserve API quota
+                max_results = arguments.get("max_results", 5)  # Default: 5 recommended products
                 
                 logger.info(f"Searching products with query: '{query}', max_results: {max_results}")
                 
@@ -770,23 +770,23 @@ class ChatService:
             display_products = deduped_products[:8]
 
             # ── SKU-focus logic ───────────────────────────────────────────────
-            # When Gemini answers a suggestion question (e.g. "Which has best
-            # rating?"), it replies in plain text calling out a specific SKU.
-            # In that case we want to show ONLY that product card so the user
-            # gets a focused card + targeted follow-up questions.
+            # When Gemini mentions specific SKUs in its response, extract and display
+            # those products. This handles two scenarios:
+            #   1. Comparison questions: "Which has best rating?" → AI lists multiple SKUs
+            #   2. Recommendation: AI suggests specific products with SKU references
             #
             # Rules:
             #  1. Extract any explicit "SKU: XXXXXXX" mentions from ai_message.
-            #  2. If the AI calls out 1-2 specific SKUs:
+            #  2. If the AI calls out specific SKUs (max 8):
             #     a. Try to find them in display_products (already fetched).
             #     b. If not there, fetch via get_product_by_sku (detail endpoint).
-            #     c. Replace display_products with ONLY those SKUs.
+            #     c. Replace display_products with ONLY those SKUs (preserves order).
             #  3. If no explicit SKU found → keep display_products as-is.
             # ─────────────────────────────────────────────────────────────────
             if ai_message:
                 # Pattern matches "SKU: 6505534" / "(SKU: 6505534)" / "SKU 6505534"
                 sku_matches = re.findall(r'\bSKU[:\s#]+(\d{6,8})\b', ai_message, re.IGNORECASE)
-                unique_skus = list(dict.fromkeys(sku_matches))[:2]   # max 2, preserve order
+                unique_skus = list(dict.fromkeys(sku_matches))[:8]   # max 8, preserve order
 
                 if unique_skus:
                     # Build a lookup of already-fetched products by SKU string

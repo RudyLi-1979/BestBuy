@@ -348,8 +348,7 @@ Glide.with(context)
 ┌───────▼───────────────────────────────────────────┐
 │              ChatService                          │
 │  - process_message()                              │
-│  - execute_function()                             │
-└───────┬───────────────────────┬───────────────────┘
+│  - execute_function()                             ││  - _generate_suggested_questions()                │└───────┬───────────────────────┬───────────────────┘
         │                       │
 ┌───────▼────────┐    ┌─────────▼────────────────────┐
 │ GeminiClient   │    │  BestBuyAPIClient            │
@@ -370,6 +369,8 @@ Glide.with(context)
   - Process user messages
   - Invoke Gemini AI
   - Execute function calls
+  - Generate suggested question chips (`_generate_suggested_questions()`)
+  - SKU-focus logic: extract up to 8 SKUs from AI response to show matched product cards
   - Return results to user
 
 #### 2. Gemini Client
@@ -392,7 +393,7 @@ Glide.with(context)
 
 #### 4. Rate Limiter
 - **Location**: `app/services/rate_limiter.py`
-- **Features**: Enforces 5 req/s against Best Buy API; prevents quota exhaustion
+- **Features**: Enforces 5 req/min against Best Buy API; prevents quota exhaustion
 
 #### 5. Additional API Routes
 - `app/api/cart.py` — server-side cart management

@@ -45,7 +45,7 @@ WHEN NOT TO USE:
 
 If user searches for specific brand products, always prefer advanced_product_search.
 
-By default, return only 2 results to conserve API quota.""",
+By default, return 5 results for good variety.""",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -55,8 +55,8 @@ By default, return only 2 results to conserve API quota.""",
                         },
                         "max_results": {
                             "type": "integer",
-                            "description": "Maximum number of results to return. DEFAULT: 2 to conserve API quota. Only increase if user explicitly asks for more options (e.g., 'show me more', 'give me 5 options').",
-                            "default": 2
+                            "description": "Maximum number of results to return. DEFAULT: 5 for good product variety. Reduce to 2-3 for very specific queries. Increase to 10+ if user explicitly asks for more options (e.g., 'show me more', 'give me 10 options').",
+                            "default": 5
                         }
                     },
                     "required": ["query"]
@@ -767,9 +767,10 @@ STEP 4: VALIDATE RESULTS
 - If results look correct → Present to user with details
 
 **API QUOTA OPTIMIZATION (CRITICAL)**:
-- By DEFAULT, show only 2 product results to conserve API resources
-- Only use max_results > 2 if user EXPLICITLY asks for more options:
-  * "show me more", "give me 5 options", "I want to see more choices"
+- By DEFAULT, show 5 product results for good variety
+- Reduce to 2-3 results for very specific queries (e.g., user asks for one specific model)
+- Increase max_results (10+) only if user EXPLICITLY asks for more options:
+  * "show me more", "give me 10 options", "I want to see more choices"
 - NEVER automatically check store availability during product search
 - Only use check_store_availability when user EXPLICITLY requests it:
   * "Where can I buy this?"

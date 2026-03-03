@@ -1196,7 +1196,10 @@ class BestBuyAPIClient:
             await self.rate_limiter.acquire()
             
             url = f"{self.base_url}/v1/products/{sku}/alsoViewed"
-            params = {"apiKey": self.api_key}
+            params = {
+                "apiKey": self.api_key,
+                "pageSize": 10  # Request up to 10 recommendations
+            }
             
             logger.info(f"Getting recommendations for SKU: {sku}")
             response = await self.client.get(url, params=params)
@@ -1377,7 +1380,10 @@ class BestBuyAPIClient:
             await self.rate_limiter.acquire()
             
             url = f"{self.base_url}/v1/products/{sku}/alsoBought"
-            params = {"apiKey": self.api_key}
+            params = {
+                "apiKey": self.api_key,
+                "pageSize": 10  # Request up to 10 also-bought products
+            }
             
             logger.info(f"Getting alsoBought recommendations for SKU: {sku}")
             response = await self.client.get(url, params=params)
